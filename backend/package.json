@@ -1,0 +1,23 @@
+{
+  "name": "sanjivani-map-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed:programs": "node seed/seedPrograms.js",
+    "seed:activities": "node seed/seedActivities.js",
+    "seed:superadmin": "node seed/seedSuperAdmin.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cloudinary": "^2.0.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.1",
+    "multer": "^2.0.2",
+    "papaparse": "^5.5.3"
+  }
+}
