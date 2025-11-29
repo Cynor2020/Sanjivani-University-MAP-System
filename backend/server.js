@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/user.js";
@@ -9,6 +10,7 @@ import categoryRoutes from "./routes/category.js";
 import deadlineRoutes from "./routes/deadline.js";
 import auditRoutes from "./routes/audit.js";
 import reportRoutes from "./routes/report.js";
+import departmentRoutes from "./routes/department.js";
 import path from "path";
 import { fileURLToPath } from 'url';
 
@@ -51,20 +53,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Cookie parsing middleware
-app.use((req, res, next) => {
-  const cookieHeader = req.headers.cookie || "";
-  const cookies = Object.fromEntries(
-    cookieHeader.split(";").map((c) => {
-      const i = c.indexOf("=");
-      if (i === -1) return ["", ""];
-      const k = c.slice(0, i).trim();
-      const v = decodeURIComponent(c.slice(i + 1));
-      return [k, v];
-    })
-  );
-  req.parsedCookies = cookies;
-  next();
-});
+app.use(cookieParser());
 
 // Connect to database
 connectDB();
@@ -83,6 +72,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/deadlines", deadlineRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/departments", departmentRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {

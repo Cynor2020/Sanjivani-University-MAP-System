@@ -5,7 +5,6 @@ import { upload } from "../middleware/multer.js";
 import { 
   uploadCertificate, 
   myCertificates, 
-  pendingCertificatesMentor, 
   pendingCertificatesHOD,
   approveCertificate, 
   rejectCertificate,
@@ -21,18 +20,15 @@ router.post("/upload", requireAuth, allowRoles("student"), upload.single('file')
 router.get("/mine", requireAuth, allowRoles("student"), myCertificates);
 router.delete("/:id", requireAuth, allowRoles("student", "super_admin", "director_admin", "hod"), deleteCertificate);
 
-// Mentor routes
-router.get("/pending/mentor", requireAuth, allowRoles("mentor"), pendingCertificatesMentor);
-router.post("/approve", requireAuth, allowRoles("mentor", "hod"), approveCertificate);
-router.post("/reject", requireAuth, allowRoles("mentor", "hod"), rejectCertificate);
-
 // HOD routes
-router.get("/pending/hod", requireAuth, allowRoles("hod"), pendingCertificatesHOD);
+router.post("/approve", requireAuth, allowRoles("hod", "director_admin"), approveCertificate);
+router.post("/reject", requireAuth, allowRoles("hod", "director_admin"), rejectCertificate);
+router.get("/pending/hod", requireAuth, allowRoles("hod", "director_admin"), pendingCertificatesHOD);
 
 // Admin routes
-router.get("/:id", requireAuth, allowRoles("student", "mentor", "hod", "director_admin", "super_admin"), getCertificateById);
+router.get("/:id", requireAuth, allowRoles("student", "hod", "director_admin", "super_admin"), getCertificateById);
 
 // Progress tracking
-router.get("/progress/:userId", requireAuth, allowRoles("student", "mentor", "hod", "director_admin", "super_admin"), getUserProgress);
+router.get("/progress/:userId", requireAuth, allowRoles("student", "hod", "director_admin", "super_admin"), getUserProgress);
 
 export default router;

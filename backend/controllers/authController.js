@@ -6,7 +6,7 @@ import AuditLog from "../models/AuditLog.js";
 const issueCookie = (res, user) => {
   const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
   const isProd = process.env.NODE_ENV === "production";
-  const attrs = isProd ? "Secure; SameSite=None;" : "SameSite=Lax;";
+  const attrs = isProd ? "Secure; SameSite=None;" : "SameSite=None;";
   res.setHeader(
     "Set-Cookie",
     `token=${token}; HttpOnly; ${attrs} Path=/; Max-Age=${7 * 24 * 3600}`
@@ -60,7 +60,9 @@ export const me = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.setHeader("Set-Cookie", "token=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0");
+  const isProd = process.env.NODE_ENV === "production";
+  const attrs = isProd ? "Secure; SameSite=None;" : "SameSite=None;";
+  res.setHeader("Set-Cookie", `token=; HttpOnly; ${attrs} Path=/; Max-Age=0`);
   res.json({ ok: true });
 };
 

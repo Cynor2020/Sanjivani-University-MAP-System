@@ -6,7 +6,7 @@ import { setDeadline, getDeadline, getAllDeadlines, deleteDeadline, checkDeadlin
 const router = Router();
 
 // HOD routes
-router.post("/", requireAuth, allowRoles("hod"), setDeadline);
+router.post("/", requireAuth, allowRoles("hod", "director_admin"), setDeadline);
 router.delete("/:id", requireAuth, allowRoles("hod", "director_admin", "super_admin"), deleteDeadline);
 
 // Public routes for students

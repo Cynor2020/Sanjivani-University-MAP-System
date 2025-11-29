@@ -117,18 +117,11 @@ export default function DirectorDashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/director/hods")}>
           <CardContent className="p-6 text-center">
             <h3 className="font-semibold">Manage HODs</h3>
             <p className="text-sm text-gray-500 mt-2">Create and manage HOD accounts</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/director/categories")}>
-          <CardContent className="p-6 text-center">
-            <h3 className="font-semibold">Manage Categories</h3>
-            <p className="text-sm text-gray-500 mt-2">Configure activity categories</p>
           </CardContent>
         </Card>
         

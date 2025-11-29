@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../ProtectedRoute.jsx";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
@@ -16,6 +17,7 @@ import {
 } from "recharts";
 
 export default function HODDashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [departmentStats, setDepartmentStats] = useState(null);
   const [pendingCertificates, setPendingCertificates] = useState([]);
@@ -25,11 +27,13 @@ export default function HODDashboard() {
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["departmentStats"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/department-stats?department=${encodeURIComponent(getUserDepartment())}`, {
+      if (!user?.department) return {};
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/department-stats?department=${encodeURIComponent(user.department)}`, {
         credentials: "include"
       });
       return res.json();
-    }
+    },
+    enabled: !!user?.department
   });
 
   // Fetch pending certificates
@@ -72,10 +76,7 @@ export default function HODDashboard() {
     }
   }, [deadlineData]);
 
-  const getUserDepartment = () => {
-    // In a real implementation, this would come from the user context
-    return "Computer Engineering"; // Placeholder
-  };
+
 
   return (
     <div className="space-y-6">

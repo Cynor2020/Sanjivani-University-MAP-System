@@ -8,9 +8,7 @@ import UploadCertificate from "./routes/student/UploadCertificate.jsx";
 import MyCertificates from "./routes/student/MyCertificates.jsx";
 import TranscriptDownload from "./routes/student/TranscriptDownload.jsx";
 import CarryForwardRequest from "./routes/student/CarryForwardRequest.jsx";
-import MentorDashboard from "./routes/mentor/MentorDashboard.jsx";
-import PendingCertificatesMentor from "./routes/mentor/PendingCertificates.jsx";
-import StudentListWithPassword from "./routes/mentor/StudentListWithPassword.jsx";
+// Mentor routes removed as per requirement
 import HODDashboard from "./routes/hod/HODDashboard.jsx";
 import PendingCertificatesHOD from "./routes/hod/PendingCertificates.jsx";
 import SetUploadDeadline from "./routes/hod/SetUploadDeadline.jsx";
@@ -32,6 +30,8 @@ import ExcellenceAwardsGenerator from "./routes/superadmin/ExcellenceAwardsGener
 import UniversityWideReports from "./routes/superadmin/UniversityWideReports.jsx";
 import CreateStudentAccount from "./routes/superadmin/CreateStudentAccount.jsx";
 import SetStudentPassword from "./routes/superadmin/SetStudentPassword.jsx";
+import ManageDepartments from "./routes/superadmin/ManageDepartments.jsx";
+import ManageHODsSA from "./routes/superadmin/ManageHODs.jsx";
 
 export default function App() {
   return (
@@ -47,11 +47,6 @@ export default function App() {
           <Route path="/student/transcript" element={<TranscriptDownload />} />
           <Route path="/student/carry-forward" element={<CarryForwardRequest />} />
 
-          {/* Mentor Routes */}
-          <Route path="/mentor" element={<MentorDashboard />} />
-          <Route path="/mentor/pending" element={<PendingCertificatesMentor />} />
-          <Route path="/mentor/students" element={<StudentListWithPassword />} />
-
           {/* HOD Routes */}
           <Route path="/hod" element={<HODDashboard />} />
           <Route path="/hod/pending" element={<PendingCertificatesHOD />} />
@@ -63,21 +58,32 @@ export default function App() {
           {/* Director Routes */}
           <Route path="/director" element={<DirectorDashboard />} />
           <Route path="/director/hods" element={<ManageHODs />} />
-          <Route path="/director/categories" element={<ManageCategories />} />
           <Route path="/director/analytics" element={<UniversityAnalytics />} />
           <Route path="/director/performance" element={<PerformanceVsStrength />} />
           <Route path="/director/top-weak" element={<TopWeakBranches />} />
+          
+          {/* Director - HOD equivalent routes */}
+          <Route path="/director/mentors" element={<ManageMentors />} />
+          <Route path="/director/deadline" element={<SetUploadDeadline />} />
+          <Route path="/director/department-reports" element={<DepartmentReports />} />
+          <Route path="/director/department-analytics" element={<AnalyticsDepartment />} />
+          <Route path="/director/pending" element={<PendingCertificatesHOD />} />
+          
+          {/* Director - Mentor equivalent routes removed */}
 
           {/* Super Admin Routes */}
           <Route path="/superadmin" element={<SuperAdminDashboard />} />
           <Route path="/superadmin/start-year" element={<StartNewAcademicYear />} />
           <Route path="/superadmin/directors" element={<ManageDirectors />} />
+          <Route path="/superadmin/categories" element={<ManageCategories />} />
           <Route path="/superadmin/academic" element={<AcademicYearManager />} />
           <Route path="/superadmin/audit" element={<AuditLogs />} />
           <Route path="/superadmin/excellence" element={<ExcellenceAwardsGenerator />} />
           <Route path="/superadmin/reports" element={<UniversityWideReports />} />
           <Route path="/superadmin/create-student" element={<CreateStudentAccount />} />
           <Route path="/superadmin/set-student-password" element={<SetStudentPassword />} />
+          <Route path="/superadmin/departments" element={<ManageDepartments />} />
+          <Route path="/superadmin/hods" element={<ManageHODsSA />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" />} />

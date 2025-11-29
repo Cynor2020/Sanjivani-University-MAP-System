@@ -218,6 +218,11 @@ export default function MyCertificates() {
                           }`}>
                             {cert.status}
                           </span>
+                          {cert.status === "rejected" && cert.rejectionReason && (
+                            <div className="text-xs text-red-600 mt-1">
+                              Reason: {cert.rejectionReason}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           {cert.status === "approved" ? (

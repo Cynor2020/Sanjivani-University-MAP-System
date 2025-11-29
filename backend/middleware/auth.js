@@ -3,7 +3,7 @@ import User from "../models/User.js";
 
 export const requireAuth = async (req, res, next) => {
   try {
-    const token = req.parsedCookies?.token || "";
+    const token = req.cookies.token || "";
     if (!token) return res.status(401).json({ error: "Unauthorized" });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.id);

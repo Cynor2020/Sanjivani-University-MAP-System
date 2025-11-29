@@ -19,12 +19,7 @@ export default function ManageCategories() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    categoryType: "technical",
-    pointsByLevel: {
-      college: 10,
-      state: 20,
-      national: 30
-    }
+    points: 0
   });
   const queryClient = useQueryClient();
 
@@ -53,15 +48,7 @@ export default function ManageCategories() {
     }));
   };
 
-  const handlePointsChange = (level, value) => {
-    setFormData(prev => ({
-      ...prev,
-      pointsByLevel: {
-        ...prev.pointsByLevel,
-        [level]: parseInt(value) || 0
-      }
-    }));
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,12 +76,7 @@ export default function ManageCategories() {
         setFormData({
           name: "",
           description: "",
-          categoryType: "technical",
-          pointsByLevel: {
-            college: 10,
-            state: 20,
-            national: 30
-          }
+          points: 0
         });
         refetch();
         queryClient.invalidateQueries(["categories"]);
@@ -111,12 +93,7 @@ export default function ManageCategories() {
     setFormData({
       name: category.name,
       description: category.description || "",
-      categoryType: category.categoryType || "technical",
-      pointsByLevel: {
-        college: category.pointsByLevel?.college || 10,
-        state: category.pointsByLevel?.state || 20,
-        national: category.pointsByLevel?.national || 30
-      }
+      points: category.points || 0
     });
     setShowForm(true);
   };
@@ -173,12 +150,7 @@ export default function ManageCategories() {
     setFormData({
       name: "",
       description: "",
-      categoryType: "technical",
-      pointsByLevel: {
-        college: 10,
-        state: 20,
-        national: 30
-      }
+      points: 0
     });
   };
 
@@ -213,19 +185,15 @@ export default function ManageCategories() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category Type</label>
-                  <select
-                    name="categoryType"
-                    value={formData.categoryType}
+                  <label className="block text-sm font-medium mb-1">Points</label>
+                  <input
+                    type="number"
+                    name="points"
+                    value={formData.points}
                     onChange={handleInputChange}
                     className="w-full border rounded p-2"
-                  >
-                    <option value="technical">Technical</option>
-                    <option value="sports">Sports</option>
-                    <option value="cultural">Cultural</option>
-                    <option value="social">Social</option>
-                    <option value="academic">Academic</option>
-                  </select>
+                    min="0"
+                  />
                 </div>
               </div>
               
@@ -238,42 +206,6 @@ export default function ManageCategories() {
                   className="w-full border rounded p-2"
                   rows="3"
                 />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Points by Level</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">College Level</label>
-                    <input
-                      type="number"
-                      value={formData.pointsByLevel.college}
-                      onChange={(e) => handlePointsChange("college", e.target.value)}
-                      className="w-full border rounded p-2"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">State Level</label>
-                    <input
-                      type="number"
-                      value={formData.pointsByLevel.state}
-                      onChange={(e) => handlePointsChange("state", e.target.value)}
-                      className="w-full border rounded p-2"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">National Level</label>
-                    <input
-                      type="number"
-                      value={formData.pointsByLevel.national}
-                      onChange={(e) => handlePointsChange("national", e.target.value)}
-                      className="w-full border rounded p-2"
-                      min="0"
-                    />
-                  </div>
-                </div>
               </div>
               
               <div className="flex gap-2">
@@ -305,11 +237,8 @@ export default function ManageCategories() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>College Points</TableHead>
-                    <TableHead>State Points</TableHead>
-                    <TableHead>National Points</TableHead>
+                    <TableHead>Points</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -318,15 +247,8 @@ export default function ManageCategories() {
                   {categories.map((category) => (
                     <TableRow key={category._id}>
                       <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {category.categoryType}
-                        </span>
-                      </TableCell>
                       <TableCell>{category.description || "-"}</TableCell>
-                      <TableCell>{category.pointsByLevel?.college || 0}</TableCell>
-                      <TableCell>{category.pointsByLevel?.state || 0}</TableCell>
-                      <TableCell>{category.pointsByLevel?.national || 0}</TableCell>
+                      <TableCell>{category.points || 0}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           category.isActive 

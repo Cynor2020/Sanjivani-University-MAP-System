@@ -1,111 +1,158 @@
-import { useAuth } from "../routes/ProtectedRoute.jsx";
-import { Bell, Menu, X, User } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../routes/ProtectedRoute.jsx";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "./ui/button.jsx";
 
 export default function Navbar() {
-  const { user } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Format user role for display
-  const formatRole = (role) => {
-    const roleMap = {
-      super_admin: "Super Admin",
-      director_admin: "Director",
-      hod: "HOD",
-      mentor: "Mentor",
-      student: "Student"
-    };
-    return roleMap[role] || role;
+  const handleLogout = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include"
+      });
+      logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const getRoleTitle = (role) => {
+    switch (role) {
+      case "super_admin": return "Super Admin";
+      case "director_admin": return "Director";
+      case "hod": return "HOD";
+
+      case "student": return "Student";
+      default: return "User";
+    }
+  };
+
+  const getDashboardPath = (role) => {
+    switch (role) {
+      case "super_admin": return "/superadmin";
+      case "director_admin": return "/director";
+      case "hod": return "/hod";
+
+      case "student": return "/student";
+      default: return "/";
+    }
   };
 
   return (
-    <header className="bg-white shadow">
+    <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            {/* Mobile menu button */}
-            <button
-              type="button"
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? (
-                <X className="block h-6 w-6" />
-              ) : (
-                <Menu className="block h-6 w-6" />
-              )}
-            </button>
-            
-            {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
-              <div className="bg-blue-600 text-white p-1 rounded mr-2">
-                <User className="h-6 w-6" />
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-2 rounded-lg shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">Sanjivani MAP</span>
+              <div className="ml-3">
+                <h1 className="text-xl font-bold text-gray-900">Sanjivani MAP</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">{getRoleTitle(user?.role)}</p>
+              </div>
             </div>
           </div>
-          
+
+          {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Notification Bell */}
-            <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none">
-              <Bell className="h-6 w-6" />
-            </button>
-            
-            {/* User Profile */}
-            <div className="flex items-center">
-              <div className="ml-3 relative">
-                <div className="flex items-center space-x-3">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
-                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
-                  </div>
-                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(getDashboardPath(user?.role))}
+              className={`font-medium ${location.pathname === getDashboardPath(user?.role) ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              Dashboard
+            </Button>
+            <div className="flex items-center space-x-3">
+              <div className="hidden lg:flex items-center space-x-2">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div className="text-right hidden xl:block">
+                  <p className="text-sm font-medium text-gray-900 truncate max-w-[120px]">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate max-w-[120px]">{user?.email}</p>
                 </div>
               </div>
+              <Button variant="outline" onClick={handleLogout} className="flex items-center space-x-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </Button>
             </div>
           </div>
-          
-          {/* Mobile menu button (duplicate for consistent spacing) */}
-          <div className="flex md:hidden items-center">
+
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
             <button
-              type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={toggleMenu}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >
-              {isMobileMenuOpen ? (
-                <X className="block h-6 w-6" />
-              ) : (
-                <Menu className="block h-6 w-6" />
-              )}
+              <svg className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <svg className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
       </div>
-      
+
       {/* Mobile menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden">
-          <div className="pt-2 pb-3 space-y-1">
-            <div className="flex items-center px-4 py-2">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                <User className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-base font-medium text-gray-900">{user?.name}</div>
-                <div className="text-sm text-gray-500">{formatRole(user?.role)}</div>
+      <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden`}>
+        <div className="pt-2 pb-3 space-y-1">
+          <button
+            onClick={() => {
+              navigate(getDashboardPath(user?.role));
+              setIsMenuOpen(false);
+            }}
+            className={`block w-full text-left px-4 py-2 text-base font-medium ${
+              location.pathname === getDashboardPath(user?.role) 
+                ? "bg-blue-50 text-blue-700 border-l-4 border-blue-700" 
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            }`}
+          >
+            Dashboard
+          </button>
+        </div>
+        <div className="pt-4 pb-3 border-t border-gray-200">
+          <div className="flex items-center px-4">
+            <div className="flex-shrink-0">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
+                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             </div>
-            <div className="px-4 py-2 border-t border-gray-200">
-              <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                <Bell className="mr-3 h-5 w-5" />
-                Notifications
-              </button>
+            <div className="ml-3">
+              <div className="text-base font-medium text-gray-800">{user?.name}</div>
+              <div className="text-sm font-medium text-gray-500">{user?.email}</div>
             </div>
           </div>
+          <div className="mt-3 px-2 space-y-1">
+            <button
+              onClick={handleLogout}
+              className="flex items-center w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
+          </div>
         </div>
-      )}
-    </header>
+      </div>
+    </nav>
   );
 }

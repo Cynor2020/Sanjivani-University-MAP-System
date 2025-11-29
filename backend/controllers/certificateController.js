@@ -159,53 +159,6 @@ export const myCertificates = async (req, res) => {
   }
 };
 
-export const pendingCertificatesMentor = async (req, res) => {
-  try {
-    const { division = "", academicYear = "", page = 1, limit = 20 } = req.query;
-    
-    // Build filter for pending certificates
-    const filter = { status: "pending" };
-    
-    // If mentor has a division, filter by that division
-    if (division) {
-      // Get students in this division
-      const students = await User.find({ division: division, role: "student" }).select('_id');
-      const studentIds = students.map(s => s._id);
-      filter.userId = { $in: studentIds };
-    }
-    
-    if (academicYear) {
-      filter.academicYear = academicYear;
-    }
-    
-    // Get total count
-    const totalCount = await Certificate.countDocuments(filter);
-    
-    // Get pending certificates with pagination
-    const certificates = await Certificate.find(filter)
-      .populate('userId', 'name email enrollmentNumber division program')
-      .populate('categoryId', 'name pointsByLevel')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .lean();
-    
-    res.json({ 
-      certificates,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalCount,
-        hasNext: page * limit < totalCount,
-        hasPrev: page > 1
-      }
-    });
-  } catch (error) {
-    console.error("Error fetching pending certificates:", error);
-    res.status(500).json({ error: "Failed to fetch pending certificates" });
-  }
-};
-
 export const pendingCertificatesHOD = async (req, res) => {
   try {
     const { department = "", academicYear = "", page = 1, limit = 20 } = req.query;
@@ -325,6 +278,27 @@ export const rejectCertificate = async (req, res) => {
     cert.rejectionReason = reason;
     cert.rejectedAt = new Date();
     cert.rejectedBy = req.user._id;
+    
+    // Delete the file from Cloudinary/local storage
+    if (cert.cloudinaryPublicId) {
+      // If it's a Cloudinary file, delete it
+      if (!cert.cloudinaryPublicId.startsWith('local_')) {
+        try {
+          await cloudinary.uploader.destroy(cert.cloudinaryPublicId);
+        } catch (cloudinaryError) {
+          console.error("Error deleting file from Cloudinary:", cloudinaryError);
+        }
+      } else {
+        // If it's a local file, delete it from the uploads directory
+        try {
+          const fileName = cert.cloudinaryPublicId.replace('local_', '');
+          const filePath = `./uploads/${fileName}`;
+          fs.unlinkSync(filePath);
+        } catch (fileError) {
+          console.error("Error deleting local file:", fileError);
+        }
+      }
+    }
     
     // Save the certificate
     await cert.save();

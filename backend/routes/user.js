@@ -26,8 +26,8 @@ router.delete("/:id", requireAuth, allowRoles("super_admin", "director_admin", "
 router.post("/set-password", requireAuth, allowRoles("super_admin", "director_admin", "hod"), setPassword);
 router.put("/:id/password", requireAuth, allowRoles("super_admin", "director_admin", "hod"), setPassword);
 
-// Student password access (for mentors)
-router.get("/student-passwords", requireAuth, allowRoles("mentor", "hod"), getStudentPasswords);
+// Student password access (for directors)
+router.get("/student-passwords", requireAuth, allowRoles("hod", "director_admin"), getStudentPasswords);
 
 // Statistics
 router.get("/department-stats", requireAuth, allowRoles("hod", "director_admin", "super_admin"), getDepartmentStats);

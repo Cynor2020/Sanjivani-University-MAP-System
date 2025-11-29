@@ -65,7 +65,7 @@ export const getCategoryById = async (req, res) => {
 
 export const upsertCategory = async (req, res) => {
   try {
-    const { id, name, description, pointsByLevel, categoryType } = req.body;
+    const { id, name, description, points } = req.body;
     
     // Validate required fields
     if (!name) {
@@ -78,7 +78,7 @@ export const upsertCategory = async (req, res) => {
       // Update existing category
       category = await ActivityCategory.findByIdAndUpdate(
         id,
-        { name, description, pointsByLevel, categoryType },
+        { name, description, points },
         { new: true, runValidators: true }
       );
       
@@ -103,8 +103,7 @@ export const upsertCategory = async (req, res) => {
       category = new ActivityCategory({
         name,
         description,
-        pointsByLevel,
-        categoryType
+        points
       });
       
       await category.save();

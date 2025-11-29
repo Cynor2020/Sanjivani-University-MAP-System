@@ -14,7 +14,6 @@ const CertificateSchema = new mongoose.Schema(
     cloudinaryPublicId: { type: String },
     cloudinaryUrl: { type: String },
     uploadedBy: { type: String },
-    mentorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     hodId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     // Additional metadata
     eventName: { type: String },

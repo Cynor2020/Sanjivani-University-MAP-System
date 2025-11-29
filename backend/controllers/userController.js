@@ -259,18 +259,19 @@ export const setPassword = async (req, res) => {
 
 export const getStudentPasswords = async (req, res) => {
   try {
-    // Only mentors and admins can view passwords
-    if (!['mentor', 'hod', 'director_admin', 'super_admin'].includes(req.user.role)) {
+    // Only admins can view passwords
+    if (!['hod', 'director_admin', 'super_admin'].includes(req.user.role)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     
     // Get students in the same division/department
     const filter = { role: "student" };
     
-    if (req.user.role === "mentor" && req.user.division) {
-      filter.division = req.user.division;
-    } else if (req.user.role === "hod" && req.user.department) {
+    if (req.user.role === "hod" && req.user.department) {
       filter.department = req.user.department;
+    } else if (req.user.role === "director_admin") {
+      // Directors can see all students
+      // No additional filtering needed
     }
     
     const students = await User.find(filter)

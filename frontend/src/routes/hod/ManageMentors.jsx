@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../ProtectedRoute.jsx";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
@@ -13,13 +14,14 @@ import {
 } from "../../components/ui/table";
 
 export default function ManageMentors() {
+  const { user } = useAuth();
   const [mentors, setMentors] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingMentor, setEditingMentor] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    division: "",
+    division: user?.division || "",
     password: ""
   });
   const [page, setPage] = useState(1);
@@ -139,7 +141,7 @@ export default function ManageMentors() {
     setFormData({
       name: "",
       email: "",
-      division: "",
+      division: user?.division || "",
       password: ""
     });
   };

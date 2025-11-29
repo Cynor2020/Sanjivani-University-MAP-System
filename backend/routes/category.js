@@ -15,9 +15,9 @@ const router = Router();
 router.get("/", requireAuth, listCategories);
 router.get("/:id", requireAuth, getCategoryById);
 
-// Admin routes
-router.post("/", requireAuth, allowRoles("director_admin", "super_admin"), upsertCategory);
-router.delete("/:id", requireAuth, allowRoles("director_admin", "super_admin"), deleteCategory);
-router.patch("/:id/toggle", requireAuth, allowRoles("director_admin", "super_admin"), toggleCategoryStatus);
+// Admin routes - Super Admin only
+router.post("/", requireAuth, allowRoles("super_admin"), upsertCategory);
+router.delete("/:id", requireAuth, allowRoles("super_admin"), deleteCategory);
+router.patch("/:id/toggle", requireAuth, allowRoles("super_admin"), toggleCategoryStatus);
 
 export default router;

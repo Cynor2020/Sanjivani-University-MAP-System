@@ -4,12 +4,7 @@ const ActivityCategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
-    pointsByLevel: { 
-      type: Map,
-      of: Number,
-      default: {}
-    },
-    categoryType: { type: String, enum: ["technical", "sports", "cultural", "social", "academic"], default: "technical" },
+    points: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }

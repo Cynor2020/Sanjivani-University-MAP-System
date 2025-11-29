@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../ProtectedRoute.jsx";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
@@ -13,6 +14,7 @@ import {
 } from "../../components/ui/table";
 
 export default function SetUploadDeadline() {
+  const { user } = useAuth();
   const [department, setDepartment] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [deadlineAt, setDeadlineAt] = useState("");
@@ -34,9 +36,13 @@ export default function SetUploadDeadline() {
   useEffect(() => {
     if (academicYearData?.year) {
       setAcademicYear(academicYearData.year);
-      setDepartment(getUserDepartment());
     }
-  }, [academicYearData]);
+    
+    // Set department from user context
+    if (user?.department) {
+      setDepartment(user.department);
+    }
+  }, [academicYearData, user]);
 
   // Fetch existing deadlines
   const { data: deadlinesData, isLoading, refetch } = useQuery({
@@ -55,10 +61,7 @@ export default function SetUploadDeadline() {
     }
   }, [deadlinesData]);
 
-  const getUserDepartment = () => {
-    // In a real implementation, this would come from the user context
-    return "Computer Engineering"; // Placeholder
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
