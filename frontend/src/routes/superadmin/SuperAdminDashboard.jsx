@@ -15,6 +15,7 @@ import {
   BarChart3,
   FileText,
   GraduationCap,
+  Eye,
 } from "lucide-react";
 
 export default function SuperAdminDashboard() {
@@ -59,6 +60,17 @@ export default function SuperAdminDashboard() {
     queryKey: ["departmentsCount"],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
+        credentials: "include",
+      });
+      return res.json();
+    },
+  });
+
+  // Fetch latest approved certificates
+  const { data: latestCertificatesData } = useQuery({
+    queryKey: ["latestApprovedCertificates"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/latest-approved`, {
         credentials: "include",
       });
       return res.json();
@@ -117,14 +129,6 @@ export default function SuperAdminDashboard() {
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[11px] font-medium text-emerald-700">System Healthy</span>
           </div>
-          <Button
-            size="sm"
-            onClick={() => navigate("/superadmin/excellence")}
-            className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-xs md:text-sm px-3 md:px-4"
-          >
-            <Award className="h-3 w-3 md:h-4 md:w-4 mr-1.5" />
-            Excellence Awards
-          </Button>
         </div>
       </div>
 
@@ -245,14 +249,36 @@ export default function SuperAdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-xs md:text-sm text-gray-600">
-                This is a demo section. You can wire it with real audit or certificate approval data.
-              </p>
-              <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs md:text-sm text-gray-800">
-                <p className="font-semibold">Activity: National Level Hackathon</p>
-                <p>Student: Demo Student (CSE)</p>
-                <p className="text-gray-500 mt-1">Just now · Approved by HOD</p>
-              </div>
+              {latestCertificatesData?.certificates?.length > 0 ? (
+                <div className="space-y-2">
+                  {latestCertificatesData.certificates.map((cert) => (
+                    <div key={cert.id} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs md:text-sm text-gray-800">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold">Activity: {cert.title}</p>
+                          <p>Student: {cert.studentName} ({cert.studentPRN})</p>
+                          <p className="text-gray-600 mt-1">
+                            {new Date(cert.approvedAt).toLocaleDateString()} · Approved by {cert.approvedBy}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(cert.cloudinaryUrl, '_blank')}
+                          className="ml-2 h-6 px-2 text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-500 text-sm">No recent approved activities</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

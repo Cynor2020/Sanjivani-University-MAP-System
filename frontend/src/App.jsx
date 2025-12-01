@@ -29,7 +29,7 @@ import ManageHODs from "./routes/superadmin/ManageHODs.jsx";
 import ManageDepartments from "./routes/superadmin/ManageDepartments.jsx";
 import StartNewAcademicYear from "./routes/superadmin/StartNewAcademicYear.jsx";
 import AuditLogs from "./routes/superadmin/AuditLogs.jsx";
-import ExcellenceAwardsGenerator from "./routes/superadmin/ExcellenceAwardsGenerator.jsx";
+import UniversityWideReports from "./routes/superadmin/UniversityWideReports.jsx";
 import Profile from "./routes/Profile.jsx";
 
 export default function App() {
@@ -61,13 +61,13 @@ export default function App() {
 
           {/* Super Admin Routes */}
           <Route path="/superadmin" element={<SuperAdminDashboard />} />
+          <Route path="/superadmin/analytics" element={<UniversityWideReports />} />
           <Route path="/superadmin/manage-directors" element={<ManageDirectors />} />
           <Route path="/superadmin/manage-hods" element={<ManageHODs />} />
           <Route path="/superadmin/manage-departments" element={<ManageDepartments />} />
           <Route path="/superadmin/manage-categories" element={<ManageCategories />} />
           <Route path="/superadmin/start-year" element={<StartNewAcademicYear />} />
           <Route path="/superadmin/audit" element={<AuditLogs />} />
-          <Route path="/superadmin/excellence" element={<ExcellenceAwardsGenerator />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" />} />

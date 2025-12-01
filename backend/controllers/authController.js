@@ -130,7 +130,7 @@ export const register = async (req, res) => {
           });
           profilePhoto = uploaded.secure_url;
         } else {
-          profilePhoto = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`;
+          profilePhoto = `http://localhost:${process.env.PORT || 5000}/uploads/${req.file.filename}`;
         }
         // Clean up temp file
         if (req.file.path) {
@@ -493,3 +493,66 @@ export const updateMyProfile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// New endpoint to get student-specific stats
+export const getMyStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user with populated department
+    const user = await User.findById(userId).populate('department', 'name');
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Get certificate stats for the student
+    const certificateStats = await User.aggregate([
+      { $match: { _id: userId } },
+      {
+        $lookup: {
+          from: "certificates",
+          localField: "_id",
+          foreignField: "userId",
+          as: "certificates"
+        }
+      },
+      { $unwind: { path: "$certificates", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: "$_id",
+          totalCertificates: { $sum: { $cond: [{ $ifNull: ["$certificates", false] }, 1, 0] } },
+          approvedCertificates: { 
+            $sum: { 
+              $cond: [{ $and: [{ $ifNull: ["$certificates", false] }, { $eq: ["$certificates.status", "approved"] }] }, 1, 0] 
+            } 
+          },
+          pendingCertificates: { 
+            $sum: { 
+              $cond: [{ $and: [{ $ifNull: ["$certificates", false] }, { $eq: ["$certificates.status", "pending"] }] }, 1, 0] 
+            } 
+          },
+          rejectedCertificates: { 
+            $sum: { 
+              $cond: [{ $and: [{ $ifNull: ["$certificates", false] }, { $eq: ["$certificates.status", "rejected"] }] }, 1, 0] 
+            } 
+          },
+          totalPoints: { $first: "$totalPoints" }
+        }
+      }
+    ]);
+    
+    const stats = certificateStats[0] || {
+      totalCertificates: 0,
+      approvedCertificates: 0,
+      pendingCertificates: 0,
+      rejectedCertificates: 0,
+      totalPoints: user.totalPoints || 0
+    };
+    
+    res.json({ stats });
+  } catch (error) {
+    console.error("Error fetching student stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+}

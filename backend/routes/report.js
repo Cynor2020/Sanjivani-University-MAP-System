@@ -6,7 +6,9 @@ import {
   exportDepartmentAnalytics,
   departmentReport,
   exportDepartmentReport,
-  generateExcellenceAwards
+  detailedAnalytics,
+  exportDetailedAnalytics,
+  getLatestApprovedCertificates
 } from "../controllers/reportController.js";
 
 const router = Router();
@@ -23,7 +25,15 @@ router.get("/department", requireAuth, allowRoles("hod"), departmentReport);
 // HOD: Export department report to CSV
 router.get("/department/export", requireAuth, allowRoles("hod"), exportDepartmentReport);
 
-// Super Admin: Excellence Awards
-router.get("/excellence-awards", requireAuth, allowRoles("super_admin"), generateExcellenceAwards);
+
+
+// Super Admin: Detailed Analytics
+router.get("/detailed-analytics", requireAuth, allowRoles("super_admin"), detailedAnalytics);
+
+// Super Admin: Get latest approved certificates
+router.get("/latest-approved", requireAuth, allowRoles("super_admin"), getLatestApprovedCertificates);
+
+// Super Admin: Export Detailed Analytics to CSV
+router.get("/detailed-analytics/export", requireAuth, allowRoles("super_admin"), exportDetailedAnalytics);
 
 export default router;

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const CertificateSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    academicYear: { type: String, required: true },
+    academicYear: { type: String, required: false },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "ActivityCategory", required: true },
     categoryName: { type: String, required: true },
     title: { type: String, required: true },
@@ -22,8 +22,8 @@ const CertificateSchema = new mongoose.Schema(
 );
 
 // Indexes for performance
-CertificateSchema.index({ userId: 1, academicYear: 1, status: 1 });
-CertificateSchema.index({ status: 1, academicYear: 1 });
+CertificateSchema.index({ userId: 1, status: 1 });
+CertificateSchema.index({ status: 1 });
 CertificateSchema.index({ department: 1, status: 1 });
 
 export default mongoose.model("Certificate", CertificateSchema);

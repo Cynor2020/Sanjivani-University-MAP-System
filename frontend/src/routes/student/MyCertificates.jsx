@@ -16,14 +16,13 @@ export default function MyCertificates() {
   const [certificates, setCertificates] = useState([]);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
-  const [academicYearFilter, setAcademicYearFilter] = useState("");
-  const [academicYears, setAcademicYears] = useState([]);
+
 
   // Fetch certificates
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["myCertificates", page, statusFilter, academicYearFilter],
+    queryKey: ["myCertificates", page, statusFilter],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/certificates/mine?page=${page}&limit=10&status=${statusFilter}&academicYear=${academicYearFilter}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/certificates/mine?page=${page}&limit=10&status=${statusFilter}`, {
         credentials: "include"
       });
       return res.json();
@@ -36,22 +35,7 @@ export default function MyCertificates() {
     }
   }, [data]);
 
-  // Fetch academic years for filter
-  const { data: academicYearsData } = useQuery({
-    queryKey: ["academicYears"],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/academic-year/all`, {
-        credentials: "include"
-      });
-      return res.json();
-    }
-  });
 
-  useEffect(() => {
-    if (academicYearsData?.years) {
-      setAcademicYears(academicYearsData.years.map(year => year.current));
-    }
-  }, [academicYearsData]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this certificate?")) {
@@ -82,7 +66,6 @@ export default function MyCertificates() {
       "Title",
       "Category",
       "Level",
-      "Academic Year",
       "Status",
       "Points",
       "Submitted Date",
@@ -97,7 +80,6 @@ export default function MyCertificates() {
         `"${cert.title || ""}"`,
         `"${cert.categoryName || ""}"`,
         `"${cert.level || ""}"`,
-        `"${cert.academicYear || ""}"`,
         `"${cert.status || ""}"`,
         `"${cert.pointsAllocated || 0}"`,
         `"${cert.createdAt ? new Date(cert.createdAt).toLocaleDateString() : ""}"`,
@@ -150,19 +132,7 @@ export default function MyCertificates() {
               </select>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Academic Year</label>
-              <select
-                value={academicYearFilter}
-                onChange={(e) => setAcademicYearFilter(e.target.value)}
-                className="w-full border rounded p-2"
-              >
-                <option value="">All Years</option>
-                {academicYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
+
             
             <div className="flex items-end">
               <Button onClick={() => setPage(1)}>Apply Filters</Button>
@@ -190,7 +160,6 @@ export default function MyCertificates() {
                       <TableHead>Title</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Level</TableHead>
-                      <TableHead>Academic Year</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Points</TableHead>
                       <TableHead>Submitted</TableHead>
@@ -207,7 +176,7 @@ export default function MyCertificates() {
                             {cert.level}
                           </span>
                         </TableCell>
-                        <TableCell>{cert.academicYear}</TableCell>
+
                         <TableCell>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             cert.status === "approved" 

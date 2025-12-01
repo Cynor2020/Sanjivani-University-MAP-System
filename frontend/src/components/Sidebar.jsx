@@ -160,13 +160,13 @@ export default function Sidebar({ isOpen, onClose }) {
     director: [{ path: "/director", label: "Dashboard", icon: Home }],
     super_admin: [
       { path: "/superadmin", label: "Dashboard", icon: Home },
+      { path: "/superadmin/analytics", label: "Detailed Analytics", icon: BarChart3 },
       { path: "/superadmin/manage-directors", label: "Manage Directors", icon: UserCheck },
       { path: "/superadmin/manage-hods", label: "Manage HODs", icon: UserCheck },
       { path: "/superadmin/manage-departments", label: "Manage Departments", icon: FolderOpen },
       { path: "/superadmin/manage-categories", label: "Manage Categories", icon: FileText },
       { path: "/superadmin/start-year", label: "Start Academic Year", icon: Calendar },
       { path: "/superadmin/audit", label: "Audit Logs", icon: Shield },
-      { path: "/superadmin/excellence", label: "Excellence Awards", icon: Award },
     ],
   };
 

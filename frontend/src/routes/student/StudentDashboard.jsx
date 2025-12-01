@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import { 
   Upload, FileText, Download, ArrowRight, 
   Award, TrendingUp, CheckCircle, Clock, AlertCircle,
-  User
+  User, FileCheck, CheckCircle2, XCircle
 } from "lucide-react";
 
 export default function StudentDashboard() {
@@ -16,6 +16,7 @@ export default function StudentDashboard() {
   const [progressData, setProgressData] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [user, setUser] = useState(null);
+  const [studentStats, setStudentStats] = useState(null);
 
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery({
@@ -51,6 +52,17 @@ export default function StudentDashboard() {
     }
   });
 
+  // Fetch student stats
+  const { data: studentStatsData } = useQuery({
+    queryKey: ["studentStats"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me/stats`, {
+        credentials: "include"
+      });
+      return res.json();
+    }
+  });
+
   useEffect(() => {
     if (userData?.user) {
       setUser(userData.user);
@@ -68,6 +80,12 @@ export default function StudentDashboard() {
       setUploadStatus(lockData);
     }
   }, [lockData]);
+
+  useEffect(() => {
+    if (studentStatsData?.stats) {
+      setStudentStats(studentStatsData.stats);
+    }
+  }, [studentStatsData]);
 
   if (userLoading || progressLoading) {
     return <LoadingSkeleton />;
@@ -130,6 +148,83 @@ export default function StudentDashboard() {
           )}
         </div>
       </div>
+
+      {/* Stats Cards */}
+      {studentStats && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-lg">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs md:text-sm text-blue-100 font-medium uppercase tracking-wide">
+                    Total Points
+                  </p>
+                  <p className="text-xl md:text-2xl font-bold mt-1 leading-tight">
+                    {user?.totalPoints || 0}
+                  </p>
+                </div>
+                <div className="p-2 rounded-2xl bg-white/15">
+                  <Award className="h-6 w-6 md:h-8 md:w-8 text-blue-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-0 shadow-lg">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs md:text-sm text-emerald-100 font-medium uppercase tracking-wide">
+                    Certificates
+                  </p>
+                  <p className="text-xl md:text-2xl font-bold mt-1 leading-tight">
+                    {studentStats.totalCertificates || 0}
+                  </p>
+                </div>
+                <div className="p-2 rounded-2xl bg-white/15">
+                  <FileText className="h-6 w-6 md:h-8 md:w-8 text-emerald-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-0 shadow-lg">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs md:text-sm text-amber-100 font-medium uppercase tracking-wide">
+                    Pending
+                  </p>
+                  <p className="text-xl md:text-2xl font-bold mt-1 leading-tight">
+                    {studentStats.pendingCertificates || 0}
+                  </p>
+                </div>
+                <div className="p-2 rounded-2xl bg-white/15">
+                  <Clock className="h-6 w-6 md:h-8 md:w-8 text-amber-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0 shadow-lg">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs md:text-sm text-purple-100 font-medium uppercase tracking-wide">
+                    Approved
+                  </p>
+                  <p className="text-xl md:text-2xl font-bold mt-1 leading-tight">
+                    {studentStats.approvedCertificates || 0}
+                  </p>
+                </div>
+                <div className="p-2 rounded-2xl bg-white/15">
+                  <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-purple-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Upload Status Banner */}
       {uploadStatus && (

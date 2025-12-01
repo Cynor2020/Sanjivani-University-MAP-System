@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-export default function UploadForm({ categories, academicYear }) {
+export default function UploadForm({ categories }) {
   const [title, setTitle] = useState("");
   const [level, setLevel] = useState("college");
   const [categoryId, setCategoryId] = useState(categories[0]?._id || "");
@@ -22,7 +22,7 @@ export default function UploadForm({ categories, academicYear }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ title, level, categoryId, file: b64, academicYear })
+      body: JSON.stringify({ title, level, categoryId, file: b64 })
     });
     const d = await res.json();
     if (!res.ok) return toast.error(d.error || "Upload failed");

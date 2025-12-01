@@ -50,7 +50,7 @@ export default function HODDashboard() {
     queryKey: ["pendingCertificatesHOD"],
     queryFn: async () => {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/certificates/pending/hod?limit=5`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/certificates/pending?limit=5`,
         {
           credentials: "include",
         },

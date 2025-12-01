@@ -29,8 +29,43 @@ export default function UniversityWideReports() {
   const [activeTab, setActiveTab] = useState("summary");
   const [departmentStats, setDepartmentStats] = useState([]);
   const [topStudents, setTopStudents] = useState([]);
+  const [weakStudents, setWeakStudents] = useState([]);
+  const [categoryStats, setCategoryStats] = useState([]);
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // Filters
+  const [departments, setDepartments] = useState([]);
+  const [departmentYears, setDepartmentYears] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedDepartmentYear, setSelectedDepartmentYear] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highestPoints, setHighestPoints] = useState("");
+  const [lowestPoints, setLowestPoints] = useState("");
+
+  // Fetch departments
+  const { data: departmentsData } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
+        credentials: "include"
+      });
+      return res.json();
+    }
+  });
+
+  // Fetch categories
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/categories`, {
+        credentials: "include"
+      });
+      return res.json();
+    }
+  });
 
   // Fetch university summary
   const { data: summaryDataRes, isLoading: summaryLoading } = useQuery({
@@ -76,6 +111,38 @@ export default function UniversityWideReports() {
     }
   });
 
+  // Fetch detailed analytics data
+  const { data: analyticsData, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery({
+    queryKey: ["detailedAnalytics"],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedDepartment) params.append('department', selectedDepartment);
+      if (selectedDepartmentYear) params.append('departmentYear', selectedDepartmentYear);
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (highestPoints) params.append('highestPoints', highestPoints);
+      if (lowestPoints) params.append('lowestPoints', lowestPoints);
+      if (searchTerm) params.append('search', searchTerm);
+
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/detailed-analytics?${params.toString()}`, {
+        credentials: "include"
+      });
+      return res.json();
+    },
+    enabled: false // We'll manually trigger this when filters change
+  });
+
+  useEffect(() => {
+    if (departmentsData?.departments) {
+      setDepartments(departmentsData.departments);
+    }
+  }, [departmentsData]);
+
+  useEffect(() => {
+    if (categoriesData?.categories) {
+      setCategories(categoriesData.categories);
+    }
+  }, [categoriesData]);
+
   useEffect(() => {
     if (summaryDataRes?.summary) {
       setSummaryData(summaryDataRes.summary);
@@ -94,9 +161,32 @@ export default function UniversityWideReports() {
     }
   }, [leaderboardData]);
 
+  // Apply filters
+  const applyFilters = () => {
+    refetchAnalytics();
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setSelectedDepartment("");
+    setSelectedDepartmentYear("");
+    setSelectedCategory("");
+    setSearchTerm("");
+    setHighestPoints("");
+    setLowestPoints("");
+  };
+
   const exportToCSV = async (type) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/university/export`, {
+      const params = new URLSearchParams();
+      if (selectedDepartment) params.append('department', selectedDepartment);
+      if (selectedDepartmentYear) params.append('departmentYear', selectedDepartmentYear);
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (highestPoints) params.append('highestPoints', highestPoints);
+      if (lowestPoints) params.append('lowestPoints', lowestPoints);
+      if (searchTerm) params.append('search', searchTerm);
+
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/detailed-analytics/export?${params.toString()}`, {
         credentials: "include"
       });
       
@@ -105,7 +195,7 @@ export default function UniversityWideReports() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'university_report.csv';
+        a.download = 'detailed_analytics_report.csv';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -130,6 +220,105 @@ export default function UniversityWideReports() {
           Export to CSV
         </Button>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Departments</label>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Department Years</label>
+              <select
+                value={selectedDepartmentYear}
+                onChange={(e) => setSelectedDepartmentYear(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Years</option>
+                <option value="First">First</option>
+                <option value="Second">Second</option>
+                <option value="Third">Third</option>
+                <option value="Fourth">Fourth</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Activity Category</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Search Student</label>
+              <input
+                type="text"
+                placeholder="Name or PRN"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Highest Points</label>
+              <input
+                type="number"
+                placeholder="Minimum points"
+                value={highestPoints}
+                onChange={(e) => setHighestPoints(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Lowest Points</label>
+              <input
+                type="number"
+                placeholder="Maximum points"
+                value={lowestPoints}
+                onChange={(e) => setLowestPoints(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={resetFilters}>
+              Reset Filters
+            </Button>
+            <Button onClick={applyFilters}>
+              Apply Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       {summaryLoading ? (

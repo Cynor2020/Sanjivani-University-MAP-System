@@ -64,9 +64,9 @@ export const uploadCertificate = async (req, res) => {
       });
     }
 
-    const { title, level, categoryId, academicYear } = req.body;
+    const { title, level, categoryId } = req.body;
     
-    if (!title || !level || !categoryId || !academicYear) {
+    if (!title || !level || !categoryId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     
@@ -86,12 +86,12 @@ export const uploadCertificate = async (req, res) => {
         cloudinaryUrl = uploaded.secure_url;
       } else {
         cloudinaryPublicId = `local_${Date.now()}_${req.file.filename}`;
-        cloudinaryUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`;
+        cloudinaryUrl = `http://localhost:${process.env.PORT || 5000}/uploads/${req.file.filename}`;
       }
     } catch (cloudinaryError) {
       console.error("Cloudinary upload error:", cloudinaryError);
       cloudinaryPublicId = `local_${Date.now()}_${req.file.filename}`;
-      cloudinaryUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`;
+      cloudinaryUrl = `http://localhost:${process.env.PORT || 5000}/uploads/${req.file.filename}`;
     }
     
     try {
@@ -113,7 +113,6 @@ export const uploadCertificate = async (req, res) => {
     
     const cert = await Certificate.create({
       userId: req.user._id,
-      academicYear,
       categoryId,
       categoryName: category.name,
       title,
@@ -145,11 +144,10 @@ export const uploadCertificate = async (req, res) => {
 
 export const myCertificates = async (req, res) => {
   try {
-    const { status = "", academicYear = "", page = 1, limit = 20 } = req.query;
+    const { status = "", page = 1, limit = 20 } = req.query;
     
     const filter = { userId: req.user._id };
     if (status) filter.status = status;
-    if (academicYear) filter.academicYear = academicYear;
     
     const total = await Certificate.countDocuments(filter);
     const certificates = await Certificate.find(filter)
@@ -175,7 +173,7 @@ export const myCertificates = async (req, res) => {
 // HOD: Get pending certificates
 export const pendingCertificates = async (req, res) => {
   try {
-    const { year, academicYear, status, sort, fromDate, toDate, page = 1, limit = 20 } = req.query;
+    const { year, status, sort, fromDate, toDate, page = 1, limit = 20 } = req.query;
     
     // Build student filter
     const studentFilter = { 
@@ -198,8 +196,6 @@ export const pendingCertificates = async (req, res) => {
 
     const studentIds = students.map(s => s._id);
     const filter = { userId: { $in: studentIds }, status: status || "pending" };
-    
-    if (academicYear) filter.academicYear = academicYear;
     
     // Apply date range filters
     if (fromDate || toDate) {
