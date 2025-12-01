@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "./ProtectedRoute.jsx";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -6,16 +6,46 @@ import toast from "react-hot-toast";
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  // Initialize form fields with user data
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setEmail(user.email || "");
+      setMobile(user.mobile || "");
+    }
+  }, [user]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setProfilePhoto(file);
       setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, email, mobile })
+      });
+      const ct = res.headers.get("content-type") || "";
+      const json = ct.includes("application/json") ? await res.json() : { error: await res.text() };
+      if (!res.ok) throw new Error(json?.error || "Failed to update profile");
+      setUser(json.user);
+      toast.success("Profile updated successfully");
+    } catch (e) {
+      toast.error(e.message || "Failed to update profile");
     }
   };
 
@@ -75,8 +105,48 @@ export default function Profile() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-gray-600 mt-2">Update your photo and password</p>
+        <p className="text-gray-600 mt-2">Update your profile details, photo and password</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <input 
+                type="text" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
+              <input 
+                type="tel" 
+                value={mobile} 
+                onChange={(e) => setMobile(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+          </div>
+          <div className="mt-3">
+            <Button onClick={handleProfileUpdate}>Save Details</Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -111,11 +181,21 @@ export default function Profile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg" />
+              <input 
+                type="password" 
+                value={currentPassword} 
+                onChange={(e) => setCurrentPassword(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg" />
+              <input 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
             </div>
           </div>
           <div className="mt-3">

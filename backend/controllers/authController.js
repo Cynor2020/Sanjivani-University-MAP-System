@@ -27,6 +27,75 @@ const getClientIP = (req) => {
   return req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress || req.ip || 'unknown';
 };
 
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+    
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    
+    // Check if user account is active
+    if (user.status === "deleted" || user.status === "inactive") {
+      return res.status(401).json({ error: "Account is inactive. Please contact administrator." });
+    }
+    
+    // Check if user has set a password
+    if (!user.passwordHash) {
+      return res.status(401).json({ 
+        error: "Account not activated. Please set your password first." 
+      });
+    }
+    
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    
+    // Update last login time
+    user.lastLoginAt = new Date();
+    await user.save();
+    
+    // Issue JWT token
+    issueCookie(res, user);
+    
+    // Log the login
+    await AuditLog.create({ 
+      ip: getClientIP(req), 
+      action: `Login: ${user.name} (${user.email})`,
+      userId: user._id
+    });
+    
+    // Return user data (excluding password hash)
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      currentYear: user.currentYear,
+      prn: user.prn,
+      mobile: user.mobile,
+      whatsapp: user.whatsapp,
+      totalPoints: user.totalPoints,
+      profilePhoto: user.profilePhoto
+    };
+    
+    res.json({ user: userData });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Login failed. Please try again." });
+  }
+};
+
 export const register = async (req, res) => {
   try {
     const { department, year, prn, name, email, mobile, whatsapp, password } = req.body;
@@ -198,100 +267,40 @@ export const registerStudent = async (req, res) => {
       status: "active"
     });
 
-    // Clean up temp file after successful user creation
-    if (tempFilePath) {
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    }
-
     await AuditLog.create({ 
       ip: getClientIP(req), 
       action: `Student registered: ${name} (${prn})`,
       userId: user._id
     });
 
-    res.status(201).json({ 
-      ok: true, 
-      message: "Account created successfully!",
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email,
-        role: user.role,
-        profilePhoto: user.profilePhoto
-      } 
-    });
-  } catch (error) {
-    // Clean up temp file if exists
+    // Clean up temp file
     if (tempFilePath) {
       try {
         fs.unlinkSync(tempFilePath);
       } catch (e) {
-        // Ignore cleanup errors
+        console.error("Error deleting temp file:", e);
       }
     }
-    console.error("Student registration error:", error);
-    res.status(500).json({ error: "Registration failed. Please try again." });
-  }
-};
 
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase() });
-    
-    if (!user) return res.status(400).json({ error: "Invalid credentials" });
-    
-    if (user.status === "deleted" || user.status === "inactive") {
-      return res.status(400).json({ error: "Account is inactive" });
-    }
-    
-    if (!user.passwordHash) {
-      return res.status(400).json({ 
-        error: "Account not activated. Please contact administrator." 
-      });
-    }
-    
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return res.status(400).json({ error: "Invalid credentials" });
-    
-    issueCookie(res, user);
-    user.lastLoginAt = new Date();
-    await user.save();
-    
-    await AuditLog.create({ 
-      ip: getClientIP(req), 
-      action: `Login: ${user.name} (${user.role})`,
-      userId: user._id
-    });
-    
-    res.json({ 
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        role: user.role, 
-        email: user.email,
-        department: user.department,
-        currentYear: user.currentYear
-      } 
-    });
+    res.json({ ok: true });
   } catch (error) {
+    // Clean up temp file on error
+    if (tempFilePath) {
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (e) {
+        console.error("Error deleting temp file:", e);
+      }
+    }
     res.status(500).json({ error: error.message });
   }
 };
 
 export const me = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    
-    // Only populate department for users who have one (students, HODs, etc.)
-    // Super Admins and Directors don't have departments
-    if (user.department) {
-      await user.populate('department', 'name years');
-    }
+    // Populate the department with both name and years
+    const user = await User.findById(req.user._id)
+      .populate('department', 'name years');
     
     res.json({ 
       user: { 
@@ -307,6 +316,28 @@ export const me = async (req, res) => {
         totalPoints: user.totalPoints,
         profilePhoto: user.profilePhoto
       } 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// New endpoint to get department years for HOD
+export const getMyDepartmentYears = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate('department', 'name years');
+      
+    if (!user.department) {
+      return res.status(400).json({ error: "User is not assigned to a department" });
+    }
+    
+    res.json({ 
+      department: {
+        id: user.department._id,
+        name: user.department.name,
+        years: user.department.years
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -402,6 +433,62 @@ export const updateMyPhoto = async (req, res) => {
     });
     const safeUser = await User.findById(req.user._id).select('-passwordHash').lean();
     res.json({ user: safeUser });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update user profile details (name, email, mobile)
+export const updateMyProfile = async (req, res) => {
+  try {
+    const { name, email, mobile } = req.body;
+    
+    // Validate input
+    if (!name || !email || !mobile) {
+      return res.status(400).json({ error: "Name, email, and mobile are required" });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+    
+    // Validate mobile format (10 digits)
+    const mobileRegex = /^\d{10}$/;
+    if (!mobileRegex.test(mobile)) {
+      return res.status(400).json({ error: "Mobile number must be 10 digits" });
+    }
+    
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ 
+      email: email.toLowerCase(), 
+      _id: { $ne: req.user._id } 
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+    
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { 
+        name,
+        email: email.toLowerCase(),
+        mobile
+      },
+      { new: true, runValidators: true }
+    ).select('-passwordHash');
+    
+    await AuditLog.create({ 
+      userId: req.user._id,
+      ip: req.ip,
+      action: "update_profile_details",
+      details: `User updated profile details: ${user.email}`
+    });
+    
+    res.json({ user });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -26,7 +26,7 @@ export default function HODDashboard() {
   const [deadlineStatus, setDeadlineStatus] = useState(null);
 
   // Fetch department stats
-  const { data: statsData, isLoading: statsLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ["departmentStats"],
     queryFn: async () => {
       if (!user?.department) return {};
@@ -41,6 +41,8 @@ export default function HODDashboard() {
       return res.json();
     },
     enabled: !!user?.department,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   // Fetch pending certificates
@@ -55,6 +57,7 @@ export default function HODDashboard() {
       );
       return res.json();
     },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   // Fetch upload lock status
@@ -66,6 +69,7 @@ export default function HODDashboard() {
       });
       return res.json();
     },
+    staleTime: 1 * 60 * 1000, // Cache for 1 minute
   });
 
   // Fetch latest department students for dashboard
@@ -80,6 +84,7 @@ export default function HODDashboard() {
       );
       return res.json();
     },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   useEffect(() => {
@@ -108,7 +113,20 @@ export default function HODDashboard() {
       .slice(0, 5);
   })();
 
+  // Ensure we always have stats to display
   const effectiveStats = departmentStats || statsData?.stats || statsData || null;
+  
+  // Keep previous stats when loading to prevent flickering
+  const [previousStats, setPreviousStats] = useState(null);
+  
+  useEffect(() => {
+    if (effectiveStats && Object.keys(effectiveStats).length > 0) {
+      setPreviousStats(effectiveStats);
+    }
+  }, [effectiveStats]);
+  
+  // Use previous stats when currently loading to prevent UI flickering
+  const displayStats = statsLoading && !effectiveStats && previousStats ? previousStats : effectiveStats;
 
   const yearWise = effectiveStats?.yearWise || [];
 
@@ -142,31 +160,13 @@ export default function HODDashboard() {
             Department overview, students and certificate activity at a glance.
           </p>
         </div>
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          {user?.profilePhoto ? (
-            <img
-              src={user.profilePhoto}
-              alt={user?.name || "HOD"}
-              className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover shadow-md border-2 border-white"
-            />
-          ) : (
-            <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm md:text-lg font-bold shadow-md">
-              {user?.name?.charAt(0)?.toUpperCase() || "H"}
-            </div>
-          )}
-          <div className="leading-tight">
-            <p className="text-sm md:text-base font-semibold text-gray-900">
-              {user?.name || "HOD"}
-            </p>
-            <p className="text-xs text-gray-500 truncate max-w-[180px]">
-              {user?.department?.name || "Department HOD"}
-            </p>
-          </div>
-        </div>
+        
+          
+      
       </div>
 
       {/* Compact stats strip at top (quick counts) */}
-      {effectiveStats && (
+      {(displayStats || previousStats) && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
           <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
             <p className="text-[10px] md:text-xs text-blue-600 font-medium uppercase tracking-wide">
@@ -213,7 +213,7 @@ export default function HODDashboard() {
               Avg Points
             </p>
             <p className="text-sm md:text-base font-semibold text-gray-900">
-              {Math.round(effectiveStats.avgPoints || 0)}
+              {Math.round((displayStats || previousStats)?.avgPoints || 0)}
             </p>
           </div>
         </div>
@@ -268,7 +268,7 @@ export default function HODDashboard() {
       )}
 
       {/* Stats Cards */}
-      {statsLoading ? (
+      {statsLoading && !previousStats ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -278,7 +278,7 @@ export default function HODDashboard() {
             </Card>
           ))}
         </div>
-      ) : effectiveStats ? (
+      ) : (displayStats || previousStats) ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition">
             <CardContent className="p-3.5 md:p-4 lg:p-5">
@@ -288,7 +288,7 @@ export default function HODDashboard() {
                     Total Students
                   </p>
                   <p className="text-xl md:text-2xl lg:text-3xl font-bold mt-0.5 md:mt-1 leading-tight">
-                    {effectiveStats.totalStudents || 0}
+                    {(displayStats || previousStats)?.totalStudents || 0}
                   </p>
                 </div>
                 <div className="p-2 rounded-2xl bg-white/15">
@@ -303,10 +303,10 @@ export default function HODDashboard() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-[10px] md:text-[11px] text-emerald-100 font-medium uppercase tracking-wide">
-                    Total Certificates (Demo)
+                    Total Certificates
                   </p>
                   <p className="text-xl md:text-2xl lg:text-3xl font-bold mt-0.5 md:mt-1 leading-tight">
-                    {effectiveStats.totalCertificates || 0}
+                    {(displayStats || previousStats)?.totalCertificates || 0}
                   </p>
                 </div>
                 <div className="p-2 rounded-2xl bg-white/15">
@@ -324,7 +324,7 @@ export default function HODDashboard() {
                     Pending Clearance
                   </p>
                   <p className="text-xl md:text-2xl lg:text-3xl font-bold mt-0.5 md:mt-1 leading-tight">
-                    {effectiveStats.pendingClearanceCount || 0}
+                    {(displayStats || previousStats)?.pendingClearanceCount || 0}
                   </p>
                 </div>
                 <div className="p-2 rounded-2xl bg-white/15">
@@ -342,7 +342,7 @@ export default function HODDashboard() {
                     Avg Points / Student
                   </p>
                   <p className="text-xl md:text-2xl lg:text-3xl font-bold mt-0.5 md:mt-1 leading-tight">
-                    {Math.round(effectiveStats.avgPoints || 0)}
+                    {Math.round((displayStats || previousStats)?.avgPoints || 0)}
                   </p>
                 </div>
                 <div className="p-2 rounded-2xl bg-white/15">

@@ -23,17 +23,18 @@ import {
 } from "recharts";
 
 export default function DepartmentReports() {
-  const [academicYear, setAcademicYear] = useState("");
+  const [departmentYear, setDepartmentYear] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("");
   const [students, setStudents] = useState([]);
   const [departmentStats, setDepartmentStats] = useState(null);
   const [activeTab, setActiveTab] = useState("students");
+  const [departmentYears, setDepartmentYears] = useState([]);
 
-  // Fetch current academic year
-  const { data: academicYearData } = useQuery({
-    queryKey: ["currentAcademicYear"],
+  // Fetch department years for HOD
+  const { data: departmentYearsData } = useQuery({
+    queryKey: ["departmentYears"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/academic-year/current`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me/department-years`, {
         credentials: "include"
       });
       return res.json();
@@ -41,16 +42,23 @@ export default function DepartmentReports() {
   });
 
   useEffect(() => {
-    if (academicYearData?.year) {
-      setAcademicYear(academicYearData.year);
+    if (departmentYearsData?.department?.years) {
+      setDepartmentYears(departmentYearsData.department.years);
     }
-  }, [academicYearData]);
+  }, [departmentYearsData]);
 
   // Fetch students
   const { data: studentsData, isLoading: studentsLoading, refetch: refetchStudents } = useQuery({
-    queryKey: ["departmentStudents", academicYear, divisionFilter],
+    queryKey: ["departmentStudents", departmentYear, divisionFilter],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users?role=student&department=${encodeURIComponent(getUserDepartment())}&division=${divisionFilter}&page=1&limit=100`, {
+      const params = new URLSearchParams();
+      params.append("role", "student");
+      if (departmentYear) params.append("year", departmentYear);
+      if (divisionFilter) params.append("division", divisionFilter);
+      params.append("page", "1");
+      params.append("limit", "100");
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users?${params}`, {
         credentials: "include"
       });
       return res.json();
@@ -59,14 +67,19 @@ export default function DepartmentReports() {
 
   // Fetch department stats
   const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["departmentStats", academicYear],
+    queryKey: ["departmentStats", departmentYear],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department?department=${encodeURIComponent(getUserDepartment())}&academicYear=${academicYear}`, {
+      // We'll need to update this to use department year instead of academic year
+      // For now, we'll pass the department year as a parameter
+      const params = new URLSearchParams();
+      if (departmentYear) params.append("year", departmentYear);
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department?${params}`, {
         credentials: "include"
       });
       return res.json();
     },
-    enabled: !!academicYear
+    enabled: !!departmentYear
   });
 
   useEffect(() => {
@@ -81,14 +94,12 @@ export default function DepartmentReports() {
     }
   }, [statsData]);
 
-  const getUserDepartment = () => {
-    // In a real implementation, this would come from the user context
-    return "Computer Engineering"; // Placeholder
-  };
-
   const exportToCSV = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department/export?department=${encodeURIComponent(getUserDepartment())}&academicYear=${academicYear}`, {
+      const params = new URLSearchParams();
+      if (departmentYear) params.append("year", departmentYear);
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department/export?${params}`, {
         credentials: "include"
       });
       
@@ -97,7 +108,7 @@ export default function DepartmentReports() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `department_${getUserDepartment()}_report.csv`;
+        a.download = `department_report_${departmentYear || 'all'}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -128,14 +139,17 @@ export default function DepartmentReports() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Academic Year</label>
-              <input
-                type="text"
-                placeholder="e.g., 2025-26"
-                value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+              <label className="block text-sm font-medium mb-1">Department Year</label>
+              <select
+                value={departmentYear}
+                onChange={(e) => setDepartmentYear(e.target.value)}
                 className="w-full border rounded p-2"
-              />
+              >
+                <option value="">All Years</option>
+                {departmentYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Division</label>
@@ -199,7 +213,7 @@ export default function DepartmentReports() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Enrollment Number</TableHead>
+                        <TableHead>PRN</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Division</TableHead>
@@ -211,7 +225,7 @@ export default function DepartmentReports() {
                     <TableBody>
                       {students.map((student) => (
                         <TableRow key={student._id}>
-                          <TableCell>{student.enrollmentNumber || "N/A"}</TableCell>
+                          <TableCell>{student.prn || "N/A"}</TableCell>
                           <TableCell className="font-medium">{student.name}</TableCell>
                           <TableCell>{student.email}</TableCell>
                           <TableCell>{student.division}</TableCell>

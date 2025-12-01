@@ -41,6 +41,9 @@ export default function App() {
       <Route path="/create-student" element={<CreateStudent />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
+          {/* Common Profile Route */}
+          <Route path="/profile" element={<Profile />} />
+          
           {/* Student Routes */}
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/upload" element={<UploadCertificate />} />
@@ -71,5 +74,3 @@ export default function App() {
     </Routes>
   );
 }
-          {/* Common Profile Route */}
-          <Route path="/profile" element={<Profile />} />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -8,17 +8,33 @@ import { Search, Eye, Trash2, Users } from "lucide-react";
 export default function ManageStudents() {
   const [search, setSearch] = useState("");
   const [year, setYear] = useState("");
-  const [academicYear, setAcademicYear] = useState("");
   const [status, setStatus] = useState("");
+  const [departmentYears, setDepartmentYears] = useState([]);
   const queryClient = useQueryClient();
 
+  // Fetch department years for HOD
+  const { data: departmentYearsData } = useQuery({
+    queryKey: ["departmentYears"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me/department-years`, {
+        credentials: "include"
+      });
+      return res.json();
+    }
+  });
+
+  useEffect(() => {
+    if (departmentYearsData?.department?.years) {
+      setDepartmentYears(departmentYearsData.department.years);
+    }
+  }, [departmentYearsData]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["departmentStudents", search, year, academicYear, status],
+    queryKey: ["departmentStudents", search, year, status],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
       if (year) params.append("year", year);
-      if (academicYear) params.append("academicYear", academicYear);
       if (status) params.append("status", status);
 
       const res = await fetch(
@@ -90,14 +106,6 @@ export default function ManageStudents() {
     }
   };
 
-  const availableYears = useMemo(() => {
-    const set = new Set();
-    (data?.students || []).forEach((s) => {
-      if (s.currentYear) set.add(s.currentYear);
-    });
-    return Array.from(set);
-  }, [data]);
-
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -129,29 +137,29 @@ export default function ManageStudents() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department Year</label>
               <select
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
+                {departmentYears && departmentYears.length > 0 ? (
+                  departmentYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))
+                ) : (
+                  // Fallback options if department years are not loaded
+                  <>
+                    <option value="First">First</option>
+                    <option value="Second">Second</option>
+                    <option value="Third">Third</option>
+                    <option value="Fourth">Fourth</option>
+                  </>
+                )}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
-              <input
-                type="text"
-                placeholder="e.g., 2024-25"
-                value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -261,4 +269,3 @@ export default function ManageStudents() {
     </div>
   );
 }
-

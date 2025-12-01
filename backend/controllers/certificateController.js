@@ -175,14 +175,22 @@ export const myCertificates = async (req, res) => {
 // HOD: Get pending certificates
 export const pendingCertificates = async (req, res) => {
   try {
-    const { year, academicYear, status, page = 1, limit = 20 } = req.query;
+    const { year, academicYear, status, sort, fromDate, toDate, page = 1, limit = 20 } = req.query;
     
-    // Get students in HOD's department
-    const students = await User.find({ 
+    // Build student filter
+    const studentFilter = { 
       role: "student", 
       department: req.user.department,
       status: { $ne: "deleted" }
-    }).select('_id');
+    };
+    
+    // Apply year filter for student's current year
+    if (year) {
+      studentFilter.currentYear = year;
+    }
+    
+    // Get students in HOD's department with filters
+    const students = await User.find(studentFilter).select('_id');
 
     if (students.length === 0) {
       return res.json({ certificates: [], pagination: { currentPage: 1, totalPages: 0, totalCount: 0 } });
@@ -192,12 +200,25 @@ export const pendingCertificates = async (req, res) => {
     const filter = { userId: { $in: studentIds }, status: status || "pending" };
     
     if (academicYear) filter.academicYear = academicYear;
+    
+    // Apply date range filters
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+      if (toDate) filter.createdAt.$lte = new Date(toDate);
+    }
+
+    // Determine sort order
+    let sortOrder = { createdAt: -1 }; // Default newest first
+    if (sort === "oldest") {
+      sortOrder = { createdAt: 1 };
+    }
 
     const total = await Certificate.countDocuments(filter);
     const certificates = await Certificate.find(filter)
       .populate('userId', 'name email prn currentYear')
       .populate('categoryId', 'name points')
-      .sort({ createdAt: -1 })
+      .sort(sortOrder)
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .lean();

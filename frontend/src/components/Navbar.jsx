@@ -12,6 +12,14 @@ export default function Navbar({ onToggleSidebar }) {
 
   const isProfilePage = location.pathname.startsWith("/profile");
 
+  const handleProfileClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isProfilePage) {
+      navigate("/profile");
+    }
+  };
+
   return (
     <nav className="bg-white/95 backdrop-blur border-b border-blue-100 shadow-sm sticky top-0 z-50">
       <div className="w-full px-3 sm:px-4 lg:px-6">
@@ -42,9 +50,7 @@ export default function Navbar({ onToggleSidebar }) {
             {/* Desktop: avatar + name */}
             <button
               type="button"
-              onClick={() => {
-                if (!isProfilePage) navigate("/profile");
-              }}
+              onClick={handleProfileClick}
               title="Profile"
               className="hidden md:flex items-center gap-2"
             >
@@ -67,9 +73,7 @@ export default function Navbar({ onToggleSidebar }) {
             {/* Mobile: only avatar */}
             <button
               type="button"
-              onClick={() => {
-                if (!isProfilePage) navigate("/profile");
-              }}
+              onClick={handleProfileClick}
               title="Profile"
               className="md:hidden flex-shrink-0"
             >
