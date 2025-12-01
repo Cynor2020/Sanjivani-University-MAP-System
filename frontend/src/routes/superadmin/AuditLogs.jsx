@@ -1,254 +1,124 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { Trash2, Shield } from "lucide-react";
 
 export default function AuditLogs() {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
-  const [logs, setLogs] = useState([]);
-  const [pagination, setPagination] = useState({});
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Fetch audit logs
-  const fetchAuditLogs = async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["auditLogs", page],
+    queryFn: async () => {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/audit?page=${page}&limit=20&search=${search}&role=${roleFilter}&action=${actionFilter}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/audit?page=${page}&limit=50`,
         { credentials: "include" }
       );
-      const data = await res.json();
-      
-      if (res.ok) {
-        setLogs(data.logs || []);
-        setPagination(data.pagination || {});
-      } else {
-        toast.error(data.error || "Failed to fetch audit logs");
-      }
-    } catch (error) {
-      toast.error("Failed to fetch audit logs");
-    } finally {
-      setLoading(false);
+      return res.json();
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [page, search, roleFilter, actionFilter]);
-
-  const handleDeleteLog = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this audit log?")) {
-      return;
-    }
-
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/audit/${id}`, {
         method: "DELETE",
         credentials: "include"
       });
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["auditLogs"]);
+      toast.success("Audit log deleted");
+    },
+    onError: () => toast.error("Failed to delete")
+  });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success("Audit log deleted successfully");
-        fetchAuditLogs(); // Refresh the list
-      } else {
-        toast.error(data.error || "Failed to delete audit log");
-      }
-    } catch (error) {
-      toast.error("Failed to delete audit log");
-    }
-  };
-
-  const handleDeleteAllLogs = async () => {
-    if (!window.confirm("Are you sure you want to delete ALL audit logs? This cannot be undone.")) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/audit`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success(data.message || "All audit logs deleted successfully");
-        fetchAuditLogs(); // Refresh the list
-      } else {
-        toast.error(data.error || "Failed to delete audit logs");
-      }
-    } catch (error) {
-      toast.error("Failed to delete audit logs");
-    }
-  };
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Audit Logs</h1>
-        <Button 
-          variant="destructive" 
-          onClick={handleDeleteAllLogs}
-          disabled={loading}
-        >
-          Delete All Logs
-        </Button>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
+        <p className="text-gray-600 mt-2">View system activity logs</p>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Search</label>
-              <input
-                type="text"
-                placeholder="Search by username, email, or action"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full border rounded p-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Role</label>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full border rounded p-2"
-              >
-                <option value="">All Roles</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="director_admin">Director</option>
-                <option value="hod">HOD</option>
-                <option value="mentor">Mentor</option>
-                <option value="student">Student</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Action</label>
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="w-full border rounded p-2"
-              >
-                <option value="">All Actions</option>
-                <option value="login">Login</option>
-                <option value="upload_certificate">Upload Certificate</option>
-                <option value="approve_certificate">Approve Certificate</option>
-                <option value="reject_certificate">Reject Certificate</option>
-                <option value="start_new_academic_year">Start New Academic Year</option>
-                <option value="set_deadline">Set Deadline</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Audit Logs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Audit Logs ({pagination.totalCount || 0} total)
+          <CardTitle className="flex items-center space-x-2">
+            <Shield className="h-5 w-5" />
+            <span>Logs ({data?.pagination?.totalCount || 0})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p>Loading audit logs...</p>
-          ) : logs.length === 0 ? (
-            <p className="text-center py-4">No audit logs found</p>
-          ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>IP Address</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow key={log._id}>
-                        <TableCell>
-                          {new Date(log.timestamp).toLocaleString()}
-                        </TableCell>
-                        <TableCell>{log.username}</TableCell>
-                        <TableCell>{log.email}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {log.role}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{log.action}</span>
-                          {log.details && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {JSON.stringify(log.details).substring(0, 50)}
-                              {JSON.stringify(log.details).length > 50 ? "..." : ""}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{log.ip}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteLog(log._id)}
-                          >
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Timestamp</th>
+                  <th className="text-left p-3">IP Address</th>
+                  <th className="text-left p-3">Action</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.logs?.map((log) => (
+                  <tr key={log._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-sm">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                    <td className="p-3 text-sm">{log.ip || "-"}</td>
+                    <td className="p-3">{log.action}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (window.confirm("Delete this log?")) {
+                            deleteMutation.mutate(log._id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(!data?.logs || data.logs.length === 0) && (
+              <div className="text-center py-8 text-gray-500">No audit logs found</div>
+            )}
+          </div>
 
-              {/* Pagination */}
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-gray-500">
-                    Page {pagination.currentPage} of {pagination.totalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setPage(page - 1)}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      onClick={() => setPage(page + 1)}
-                      disabled={page === pagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {data?.pagination && (
+            <div className="flex justify-between items-center mt-4">
+              <div className="text-sm text-gray-600">
+                Page {data.pagination.currentPage} of {data.pagination.totalPages}
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!data.pagination.hasPrev}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!data.pagination.hasNext}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

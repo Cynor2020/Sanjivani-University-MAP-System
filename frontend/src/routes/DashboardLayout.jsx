@@ -11,7 +11,7 @@ const PageTransition = ({ children }) => (
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -10 }}
-    transition={{ duration: 0.3, ease: "easeInOut" }}
+    transition={{ duration: 0.2, ease: "easeInOut" }}
   >
     {children}
   </motion.div>
@@ -23,27 +23,23 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Show loading state
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
+    const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
-  // Redirect if user role doesn't match expected routes
   useEffect(() => {
     if (!user) return;
     
     const roleRouteMap = {
       super_admin: "/superadmin",
-      director_admin: "/director",
+      director: "/director",
       hod: "/hod",
-      mentor: "/mentor",
       student: "/student"
     };
     
     const expectedRoute = roleRouteMap[user.role];
     if (expectedRoute && !window.location.pathname.startsWith(expectedRoute)) {
-      // Allow access to common routes
       const commonRoutes = ["/profile", "/settings"];
       const isCommonRoute = commonRoutes.some(route => 
         window.location.pathname.startsWith(route)
@@ -64,11 +60,11 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
       <Navbar />
-      <div className="flex pt-16">
+      <div className="flex">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-6 transition-all duration-300">
+        <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 transition-all duration-300">
           <div className="max-w-7xl mx-auto w-full">
             <AnimatePresence mode="wait">
               <PageTransition key={location.pathname}>

@@ -5,11 +5,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import LoadingSkeleton from "../../components/LoadingSkeleton.jsx";
 import toast from "react-hot-toast";
+import { 
+  Upload, FileText, Download, ArrowRight, 
+  Award, TrendingUp, CheckCircle, Clock, AlertCircle,
+  User
+} from "lucide-react";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const [progressData, setProgressData] = useState(null);
-  const [deadlineStatus, setDeadlineStatus] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
   const [user, setUser] = useState(null);
 
   // Fetch user data
@@ -27,19 +32,19 @@ export default function StudentDashboard() {
   const { data: progressDataRes, isLoading: progressLoading } = useQuery({
     queryKey: ["userProgress"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/certificates/progress/${userData?.user?._id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/certificates/progress/${userData?.user?.id}`, {
         credentials: "include"
       });
       return res.json();
     },
-    enabled: !!userData?.user?._id
+    enabled: !!userData?.user?.id
   });
 
-  // Fetch deadline status
-  const { data: deadlineData, isLoading: deadlineLoading } = useQuery({
-    queryKey: ["deadlineStatus"],
+  // Fetch upload lock status
+  const { data: lockData } = useQuery({
+    queryKey: ["uploadLockStatus"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/deadlines/status`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/upload-lock/status`, {
         credentials: "include"
       });
       return res.json();
@@ -59,156 +64,147 @@ export default function StudentDashboard() {
   }, [progressDataRes]);
 
   useEffect(() => {
-    if (deadlineData) {
-      setDeadlineStatus(deadlineData);
+    if (lockData) {
+      setUploadStatus(lockData);
     }
-  }, [deadlineData]);
+  }, [lockData]);
 
   if (userLoading || progressLoading) {
     return <LoadingSkeleton />;
   }
 
-  // Get badge class based on percentage
+  // Get progress color
+  const getProgressColor = (percentage) => {
+    if (percentage >= 80) return "from-green-500 to-emerald-600";
+    if (percentage >= 50) return "from-yellow-500 to-orange-600";
+    return "from-red-500 to-pink-600";
+  };
+
+  // Get badge class
   const getProgressBadgeClass = (percentage) => {
-    if (percentage >= 80) return "bg-green-100 text-green-800";
-    if (percentage >= 50) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
+    if (percentage >= 80) return "bg-green-100 text-green-800 border-green-300";
+    if (percentage >= 50) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    return "bg-red-100 text-red-800 border-red-300";
   };
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back, track your academic progress</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="hidden sm:block">
-            <div className="bg-gray-100 px-3 py-1 rounded-full text-sm">
-              <span className="font-medium">{user?.program}</span> - Year {user?.currentYear}
-            </div>
+        <div className="flex items-center gap-4">
+          {/* Profile Photo */}
+          <div className="relative">
+            {user?.profilePhoto ? (
+              <img 
+                src={user.profilePhoto} 
+                alt={user?.name || "Student"} 
+                className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-white shadow-lg">
+                <User className="h-8 w-8 text-white" />
+              </div>
+            )}
           </div>
+          
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Student Dashboard
+            </h1>
+            <p className="text-gray-600 mt-2">Welcome back, {user?.name || "Student"}!</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          {user?.department && (
+            <div className="bg-gradient-to-r from-blue-100 to-indigo-100 px-4 py-2 rounded-xl border border-blue-200">
+              <p className="text-sm text-gray-600">Department</p>
+              <p className="font-semibold text-gray-900">{user.department?.name || "N/A"}</p>
+            </div>
+          )}
+          {user?.currentYear && (
+            <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-4 py-2 rounded-xl border border-purple-200">
+              <p className="text-sm text-gray-600">Year</p>
+              <p className="font-semibold text-gray-900">{user.currentYear}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Welcome Message */}
-      <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-white p-3 rounded-full shadow">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Welcome, {user?.name}</h2>
-                <p className="text-gray-600">
-                  {user?.program} - Year {user?.currentYear} | {user?.department}
-                </p>
-              </div>
-            </div>
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Enrollment Number</p>
-              <p className="font-medium text-gray-900">{user?.enrollmentNumber || "N/A"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Deadline Status Banner */}
-      {deadlineStatus && (
-        <Card className={`
-          border-0 shadow-lg 
-          ${deadlineStatus.status === "active" && deadlineStatus.daysRemaining <= 3 
-            ? "bg-red-50 border border-red-200" 
-            : deadlineStatus.status === "active" 
-              ? "bg-green-50 border border-green-200" 
-              : "bg-yellow-50 border border-yellow-200"}
-        `}>
-          <CardContent className="p-4">
-            {deadlineStatus.status === "no_academic_year" && (
-              <div className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="text-center text-yellow-700 font-medium">No active academic year found. Please contact the administration.</p>
-              </div>
-            )}
-            {deadlineStatus.status === "no_deadline" && (
-              <div className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="text-center text-yellow-700 font-medium">No upload deadline set for your department yet.</p>
-              </div>
-            )}
-            {deadlineStatus.status === "expired" && (
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-red-700 font-bold">Certificate upload deadline has passed!</p>
-                </div>
-                <p className="text-sm text-red-600">You can no longer upload certificates for this academic year.</p>
-              </div>
-            )}
-            {deadlineStatus.status === "active" && (
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="font-bold text-gray-900">
-                    {deadlineStatus.daysRemaining > 3 
-                      ? `Certificate upload deadline: ${deadlineStatus.daysRemaining} days remaining` 
-                      : deadlineStatus.message}
-                  </p>
-                </div>
-                {deadlineStatus.daysRemaining <= 3 && (
-                  <Button 
-                    className="mt-2"
-                    onClick={() => navigate("/student/upload")}
-                  >
-                    Upload Certificate Now
-                  </Button>
+      {/* Upload Status Banner */}
+      {uploadStatus && (
+        <Card className={`border-2 shadow-lg ${
+          uploadStatus.isActive 
+            ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300" 
+            : "bg-gradient-to-r from-red-50 to-orange-50 border-red-300"
+        }`}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {uploadStatus.isActive ? (
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-8 w-8 text-red-600" />
                 )}
+                <div>
+                  <h3 className="font-bold text-lg">
+                    Certificate Upload: {uploadStatus.isActive ? "Active" : "Disabled"}
+                  </h3>
+                  {!uploadStatus.isActive && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Certificate upload is currently disabled by HOD. {uploadStatus.deadline && `Deadline overdue: ${new Date(uploadStatus.deadline).toLocaleString()}`}
+                    </p>
+                  )}
+                  {uploadStatus.isActive && uploadStatus.deadline && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Deadline: {new Date(uploadStatus.deadline).toLocaleString()}
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
+              {uploadStatus.isActive && (
+                <Button 
+                  onClick={() => navigate("/student/upload")}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Certificate
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Overall Progress */}
       {progressData && (
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Overall Progress
+        <Card className="border-2 border-gray-200 shadow-xl bg-gradient-to-br from-white to-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-6 w-6 text-blue-600" />
+              <span>Overall Progress</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Total Points</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {progressData.totalPoints} / {progressData.requiredPoints}
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold text-gray-700">Total Points</span>
+                  <span className="text-2xl font-bold text-gray-900">
+                    {progressData.totalPoints || 0} / {progressData.requiredPoints || 200}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
+                <div className="w-full bg-gray-200 rounded-full h-6 shadow-inner">
                   <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full progress-bar"
-                    style={{ width: `${Math.min(100, progressData.percentage)}%` }}
+                    className={`bg-gradient-to-r ${getProgressColor(progressData.percentage || 0)} h-6 rounded-full transition-all duration-500 shadow-lg`}
+                    style={{ width: `${Math.min(100, progressData.percentage || 0)}%` }}
                   ></div>
                 </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-gray-500">{progressData.percentage}% Complete</span>
-                  <span className={`badge ${getProgressBadgeClass(progressData.percentage)}`}>
+                <div className="flex justify-between items-center mt-4">
+                  <span className="text-sm font-medium text-gray-600">
+                    {progressData.percentage || 0}% Complete
+                  </span>
+                  <span className={`px-4 py-1 rounded-full text-sm font-semibold border-2 ${getProgressBadgeClass(progressData.percentage || 0)}`}>
                     {progressData.percentage >= 80 ? "Excellent" : progressData.percentage >= 50 ? "Good" : "Needs Improvement"}
                   </span>
                 </div>
@@ -220,33 +216,31 @@ export default function StudentDashboard() {
 
       {/* Year-wise Progress */}
       {progressData?.yearWise && progressData.yearWise.length > 0 && (
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Year-wise Progress
+        <Card className="border-2 border-gray-200 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Award className="h-6 w-6 text-purple-600" />
+              <span>Year-wise Progress</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {progressData.yearWise.map((yearData, index) => (
-                <div key={index} className="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-center mb-3 text-gray-900">Year {yearData.year}</h3>
-                  <div className="text-center text-2xl font-bold mb-2 text-gray-900">
-                    {yearData.points} / {yearData.minRequired}
+                <div key={index} className="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-lg transition-shadow">
+                  <h3 className="font-bold text-center mb-3 text-gray-900 text-lg">Year {yearData.year}</h3>
+                  <div className="text-center text-3xl font-bold mb-3 text-gray-900">
+                    {yearData.points || 0} / {yearData.minRequired || 50}
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                  <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
                     <div
-                      className="bg-gradient-to-r from-green-400 to-green-600 h-2.5 rounded-full progress-bar"
-                      style={{ width: `${Math.min(100, yearData.percentage)}%` }}
+                      className={`bg-gradient-to-r ${getProgressColor(yearData.percentage || 0)} h-3 rounded-full`}
+                      style={{ width: `${Math.min(100, yearData.percentage || 0)}%` }}
                     ></div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500">{yearData.percentage}%</span>
-                    <span className={`badge text-xs ${getProgressBadgeClass(yearData.percentage)}`}>
-                      {yearData.status}
+                    <span className="text-xs text-gray-500">{yearData.percentage || 0}%</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getProgressBadgeClass(yearData.percentage || 0)}`}>
+                      {yearData.status || "Pending"}
                     </span>
                   </div>
                 </div>
@@ -257,64 +251,60 @@ export default function StudentDashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="dashboard-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card 
-          className="card-hover border-0 shadow-lg cursor-pointer" 
+          className="group cursor-pointer border-2 border-transparent hover:border-blue-500 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-blue-50"
           onClick={() => navigate("/student/upload")}
         >
           <CardContent className="p-6 text-center">
-            <div className="bg-blue-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <Upload className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-semibold text-lg text-gray-900">Upload Certificate</h3>
-            <p className="text-sm text-gray-600 mt-2">Submit new certificates for approval</p>
+            <h3 className="font-bold text-lg text-gray-900 mb-2">Upload Certificate</h3>
+            <p className="text-sm text-gray-600">Submit new certificates for approval</p>
+            <ArrowRight className="h-5 w-5 text-blue-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
           </CardContent>
         </Card>
         
         <Card 
-          className="card-hover border-0 shadow-lg cursor-pointer" 
+          className="group cursor-pointer border-2 border-transparent hover:border-green-500 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-green-50"
           onClick={() => navigate("/student/certificates")}
         >
           <CardContent className="p-6 text-center">
-            <div className="bg-green-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <FileText className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-semibold text-lg text-gray-900">My Certificates</h3>
-            <p className="text-sm text-gray-600 mt-2">View your submitted certificates</p>
+            <h3 className="font-bold text-lg text-gray-900 mb-2">My Certificates</h3>
+            <p className="text-sm text-gray-600">View your submitted certificates</p>
+            <ArrowRight className="h-5 w-5 text-green-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
           </CardContent>
         </Card>
         
         <Card 
-          className="card-hover border-0 shadow-lg cursor-pointer" 
+          className="group cursor-pointer border-2 border-transparent hover:border-purple-500 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-purple-50"
           onClick={() => navigate("/student/transcript")}
         >
           <CardContent className="p-6 text-center">
-            <div className="bg-purple-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <Download className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-semibold text-lg text-gray-900">Download Transcript</h3>
-            <p className="text-sm text-gray-600 mt-2">Get your official MAP transcript</p>
+            <h3 className="font-bold text-lg text-gray-900 mb-2">Download Transcript</h3>
+            <p className="text-sm text-gray-600">Get your official MAP transcript</p>
+            <ArrowRight className="h-5 w-5 text-purple-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
           </CardContent>
         </Card>
         
         <Card 
-          className="card-hover border-0 shadow-lg cursor-pointer" 
+          className="group cursor-pointer border-2 border-transparent hover:border-amber-500 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-amber-50"
           onClick={() => navigate("/student/carry-forward")}
         >
           <CardContent className="p-6 text-center">
-            <div className="bg-amber-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <ArrowRight className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-semibold text-lg text-gray-900">Carry Forward Request</h3>
-            <p className="text-sm text-gray-600 mt-2">Request to carry forward points</p>
+            <h3 className="font-bold text-lg text-gray-900 mb-2">Carry Forward</h3>
+            <p className="text-sm text-gray-600">Request to carry forward points</p>
+            <ArrowRight className="h-5 w-5 text-amber-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
           </CardContent>
         </Card>
       </div>

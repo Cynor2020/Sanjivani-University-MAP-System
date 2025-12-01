@@ -1,242 +1,240 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { UserPlus, Trash2 } from "lucide-react";
 
-export default function ManageHODsSA() {
-  const [hods, setHods] = useState([]);
+export default function ManageHODs() {
   const [showForm, setShowForm] = useState(false);
-  const [editingHod, setEditingHod] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    department: "",
-    password: ""
+    password: "",
+    mobile: "",
+    whatsapp: "",
+    address: "",
+    designation: "",
+    department: ""
   });
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch HODs
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["hods", page, search],
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users?role=hod&page=${page}&limit=10&search=${search}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
         credentials: "include"
       });
       return res.json();
     }
   });
 
-  useEffect(() => {
-    if (data?.users) {
-      setHods(data.users);
-    }
-  }, [data]);
+  // Filter only active departments
+  const activeDepartments = departments?.departments?.filter(dept => dept.isActive !== false) || [];
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const url = editingHod 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/users/${editingHod._id}` 
-        : `${import.meta.env.VITE_BACKEND_URL}/api/users`;
-      
-      const method = editingHod ? "PUT" : "POST";
-      
-      const requestData = { ...formData, role: "hod" };
-      
-      // Remove password field if empty when editing
-      if (editingHod && !formData.password) {
-        delete requestData.password;
-      }
-      
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(requestData)
+  const { data, isLoading } = useQuery({
+    queryKey: ["hods"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/hods`, {
+        credentials: "include"
       });
-      
       const result = await res.json();
-      
-      if (res.ok) {
-        toast.success(editingHod ? "HOD updated successfully" : "HOD created successfully");
-        setShowForm(false);
-        setEditingHod(null);
-        setFormData({
-          name: "",
-          email: "",
-          department: "",
-          password: ""
-        });
-        refetch();
-        queryClient.invalidateQueries(["hods"]);
-      } else {
-        toast.error(result.error || "Failed to save HOD");
+      console.log("HODs API Response:", result); // Debug log
+      console.log("HODs count:", result?.hods?.length || 0); // Debug log
+      return result;
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const formDataObj = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key !== 'profilePhoto' && data[key]) {
+          formDataObj.append(key, data[key]);
+        }
+      });
+      if (profilePhoto) {
+        formDataObj.append('profilePhoto', profilePhoto);
       }
-    } catch (error) {
-      toast.error("Failed to save HOD");
-    }
-  };
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/hods`, {
+        method: "POST",
+        credentials: "include",
+        body: formDataObj
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["hods"]);
+      toast.success("HOD created successfully");
+      setShowForm(false);
+      setFormData({ name: "", email: "", password: "", mobile: "", whatsapp: "", address: "", designation: "", department: "" });
+      setProfilePhoto(null);
+      setPreviewUrl("");
+    },
+    onError: (error) => toast.error(error.message || "Failed to create HOD")
+  });
 
-  const handleEdit = (hod) => {
-    setEditingHod(hod);
-    setFormData({
-      name: hod.name,
-      email: hod.email,
-      department: hod.department || "",
-      password: ""
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this HOD?")) {
-      return;
-    }
-    
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}`, {
         method: "DELETE",
         credentials: "include"
       });
-      
-      const result = await res.json();
-      
-      if (res.ok) {
-        toast.success("HOD deleted successfully");
-        refetch();
-        queryClient.invalidateQueries(["hods"]);
-      } else {
-        toast.error(result.error || "Failed to delete HOD");
-      }
-    } catch (error) {
-      toast.error("Failed to delete HOD");
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["hods"]);
+      toast.success("HOD deleted");
+    },
+    onError: () => toast.error("Failed to delete")
+  });
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePhoto(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
-  const resetForm = () => {
-    setShowForm(false);
-    setEditingHod(null);
-    setFormData({
-      name: "",
-      email: "",
-      department: "",
-      password: ""
-    });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.department) {
+      toast.error("Please select a department");
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    createMutation.mutate(formData);
   };
 
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Manage HODs</h1>
-        <Button onClick={() => setShowForm(true)}>
-          Add New HOD
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Manage HODs</h1>
+          <p className="text-gray-600 mt-2">Create and manage HODs</p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add HOD
         </Button>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Search HODs by name or email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 border rounded p-2"
-            />
-            <Button onClick={() => setPage(1)}>Search</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* HOD Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{editingHod ? "Edit HOD" : "Add New HOD"}</CardTitle>
+            <CardTitle>Add HOD</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Full Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
                     required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                   <input
                     type="email"
-                    name="email"
+                    required
                     value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required
-                    disabled={!!editingHod}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Department *</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {editingHod ? "New Password (optional)" : "Password *"}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                   <input
                     type="password"
-                    name="password"
+                    required
                     value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required={!editingHod}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter password (min 6 characters)"
+                    minLength={6}
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
+                  <select
+                    required
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Department</option>
+                    {activeDepartments.map(dept => (
+                      <option key={dept._id} value={dept._id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
+                  <input
+                    type="text"
+                    value={formData.mobile}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Designation</label>
+                  <input
+                    type="text"
+                    value={formData.designation}
+                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  {previewUrl && (
+                    <div className="mt-2">
+                      <img src={previewUrl} alt="Preview" className="h-24 w-24 object-cover rounded-lg border" />
+                    </div>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Button type="submit">
-                  {editingHod ? "Update HOD" : "Create HOD"}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+              <div className="flex space-x-2">
+                <Button type="submit">Create HOD</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancel
                 </Button>
               </div>
@@ -245,86 +243,58 @@ export default function ManageHODsSA() {
         </Card>
       )}
 
-      {/* HODs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All HODs</CardTitle>
+          <CardTitle>HODs ({data?.hods?.length || 0})</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Loading HODs...</p>
-          ) : hods.length === 0 ? (
-            <p className="text-center py-4">No HODs found</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {hods.map((hod) => (
-                      <TableRow key={hod._id}>
-                        <TableCell className="font-medium">{hod.name}</TableCell>
-                        <TableCell>{hod.email}</TableCell>
-                        <TableCell>{hod.department}</TableCell>
-                        <TableCell>
-                          {new Date(hod.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleEdit(hod)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              onClick={() => handleDelete(hod._id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Pagination */}
-              {data?.pagination && data.pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Page {data.pagination.currentPage} of {data.pagination.totalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setPage(page - 1)}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      onClick={() => setPage(page + 1)}
-                      disabled={page === data.pagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Photo</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Email</th>
+                  <th className="text-left p-3">Department</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.hods?.map((hod) => (
+                  <tr key={hod._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">
+                      {hod.profilePhoto ? (
+                        <img src={hod.profilePhoto} alt={hod.name} className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                          {hod.name.charAt(0)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3">{hod.name}</td>
+                    <td className="p-3">{hod.email}</td>
+                    <td className="p-3">{hod.department?.name || "-"}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (window.confirm(`Delete ${hod.name}?`)) {
+                            deleteMutation.mutate(hod._id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(!data?.hods || data.hods.length === 0) && (
+              <div className="text-center py-8 text-gray-500">No HODs found</div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

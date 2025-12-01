@@ -9,7 +9,6 @@ export default function UploadCertificate() {
     title: "",
     categoryId: "",
     level: "",
-    academicYear: "",
     eventName: "",
     eventDate: "",
     organizer: "",
@@ -30,25 +29,16 @@ export default function UploadCertificate() {
     }
   });
 
-  // Fetch current academic year
-  const { data: academicYearData, isLoading: yearLoading } = useQuery({
-    queryKey: ["academicYear"],
+  // Check upload status
+  const { data: uploadStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ["uploadStatus"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/academic-year/current`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/certificates/upload-status`, {
         credentials: "include"
       });
       return res.json();
     }
   });
-
-  useEffect(() => {
-    if (academicYearData?.year) {
-      setFormData(prev => ({
-        ...prev,
-        academicYear: academicYearData.year
-      }));
-    }
-  }, [academicYearData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -75,7 +65,7 @@ export default function UploadCertificate() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.categoryId || !formData.level || !formData.academicYear || !formData.file) {
+    if (!formData.title || !formData.categoryId || !formData.level || !formData.file) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -88,7 +78,6 @@ export default function UploadCertificate() {
       formDataObj.append("title", formData.title);
       formDataObj.append("categoryId", formData.categoryId);
       formDataObj.append("level", formData.level);
-      formDataObj.append("academicYear", formData.academicYear);
       formDataObj.append("eventName", formData.eventName);
       formDataObj.append("eventDate", formData.eventDate);
       formDataObj.append("organizer", formData.organizer);
@@ -110,7 +99,6 @@ export default function UploadCertificate() {
           title: "",
           categoryId: "",
           level: "",
-          academicYear: formData.academicYear,
           eventName: "",
           eventDate: "",
           organizer: "",
@@ -129,6 +117,29 @@ export default function UploadCertificate() {
   };
 
   const categories = categoriesData?.categories || [];
+  
+  // Find selected category to display description
+  const selectedCategory = categories.find(cat => cat._id === formData.categoryId);
+
+  // Show message if upload is disabled
+  if (uploadStatus && !uploadStatus.allowed) {
+    return (
+      <div className="p-6 space-y-6">
+        <h1 className="text-3xl font-bold">Upload Certificate</h1>
+        <Card className="border-red-300 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="text-red-600 text-2xl">⚠️</div>
+              <div>
+                <h3 className="font-semibold text-red-900 text-lg">Certificate Upload Disabled</h3>
+                <p className="text-red-700 mt-1">{uploadStatus.message || "Certificate upload is currently disabled by HOD. Deadline overdue."}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -177,6 +188,16 @@ export default function UploadCertificate() {
                       ))}
                     </select>
                   )}
+                  {selectedCategory && (
+                    <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        <strong>Description:</strong> {selectedCategory.description || "No description available"}
+                      </p>
+                      <p className="text-sm text-blue-800 mt-1">
+                        <strong>Points:</strong> {selectedCategory.points}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -193,23 +214,6 @@ export default function UploadCertificate() {
                     <option value="state">State Level</option>
                     <option value="national">National Level</option>
                   </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Academic Year *</label>
-                  {yearLoading ? (
-                    <p>Loading academic year...</p>
-                  ) : (
-                    <input
-                      type="text"
-                      name="academicYear"
-                      value={formData.academicYear}
-                      onChange={handleInputChange}
-                      className="w-full border rounded p-2"
-                      placeholder="e.g., 2025-26"
-                      required
-                    />
-                  )}
                 </div>
               </div>
               
@@ -313,7 +317,7 @@ export default function UploadCertificate() {
             <li>Only PDF, JPEG, and PNG files are allowed</li>
             <li>File size must be less than 5MB</li>
             <li>Make sure all details are accurate before submitting</li>
-            <li>Uploaded certificates will be reviewed by your mentor</li>
+            <li>Uploaded certificates will be reviewed by your HOD</li>
             <li>You can view the status of your certificates in "My Certificates"</li>
           </ul>
         </CardContent>

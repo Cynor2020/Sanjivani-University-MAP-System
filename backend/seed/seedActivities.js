@@ -5,195 +5,98 @@ dotenv.config();
 
 await connectDB();
 
-const categories = [
-  // Technical Competitions
-  {
-    name: "Technical Competitions",
-    description: "Participation in technical competitions",
-    points: 10
-  },
-  {
-    name: "Hackathons",
-    description: "Participation in hackathons",
-    points: 15
-  },
-  {
-    name: "Coding Competitions",
-    description: "Participation in coding competitions",
-    points: 10
-  },
-  {
-    name: "Project Competitions",
-    description: "Participation in project competitions",
-    points: 15
-  },
-  {
-    name: "Technical Paper Presentation",
-    description: "Presenting technical papers",
-    points: 15
-  },
-  {
-    name: "Technical Paper Publication",
-    description: "Publishing technical papers",
-    points: 20
-  },
-  {
-    name: "Patent Filed",
-    description: "Filing patents",
-    points: 25
-  },
-  {
-    name: "Patent Published",
-    description: "Publishing patents",
-    points: 30
-  },
-  {
-    name: "MOOC Courses",
-    description: "Completing MOOC courses",
-    points: 5
-  },
-  {
-    name: "Certifications",
-    description: "Obtaining professional certifications",
-    points: 10
-  },
-
-  // Sports
-  {
-    name: "Sports Participation",
-    description: "Participation in sports events",
-    points: 5
-  },
-  {
-    name: "Sports Winner",
-    description: "Winning in sports events",
-    points: 10
-  },
-  {
-    name: "Sports Captain",
-    description: "Being captain of sports teams",
-    points: 15
-  },
-
-  // Cultural Activities
-  {
-    name: "Cultural Events Participation",
-    description: "Participation in cultural events",
-    points: 5
-  },
-  {
-    name: "Cultural Events Winner",
-    description: "Winning in cultural events",
-    points: 10
-  },
-  {
-    name: "Cultural Event Organization",
-    description: "Organizing cultural events",
-    points: 15
-  },
-
-  // Social Activities
-  {
-    name: "NSS/NCC Activities",
-    description: "Participation in NSS/NCC activities",
-    points: 10
-  },
-  {
-    name: "Social Campaigns",
-    description: "Participation in social campaigns",
-    points: 10
-  },
-  {
-    name: "Blood Donation",
-    description: "Blood donation activities",
-    points: 5
-  },
-  {
-    name: "Community Service",
-    description: "Community service activities",
-    points: 10
-  },
-
-  // Academic Activities
-  {
-    name: "Seminar/Workshop Participation",
-    description: "Participation in seminars/workshops",
-    points: 5
-  },
-  {
-    name: "Seminar/Workshop Presentation",
-    description: "Presenting in seminars/workshops",
-    points: 10
-  },
-  {
-    name: "Seminar/Workshop Organization",
-    description: "Organizing seminars/workshops",
-    points: 15
-  },
-  {
-    name: "Guest Lecture Attendance",
-    description: "Attending guest lectures",
-    points: 5
-  },
-  {
-    name: "Industrial Visit",
-    description: "Participating in industrial visits",
-    points: 10
-  },
-  {
-    name: "Internship",
-    description: "Completing internships",
-    points: 20
-  },
-  {
-    name: "Industrial Training",
-    description: "Completing industrial training",
-    points: 25
-  },
-  {
-    name: "Research Activities",
-    description: "Participating in research activities",
-    points: 20
-  },
-  {
-    name: "Conference Participation",
-    description: "Participating in conferences",
-    points: 15
-  },
-  {
-    name: "Conference Presentation",
-    description: "Presenting in conferences",
-    points: 20
-  },
-  {
-    name: "Conference Publication",
-    description: "Publishing in conferences",
-    points: 25
-  },
-  {
-    name: "Quiz Competition",
-    description: "Participating in quiz competitions",
-    points: 10
-  },
-  {
-    name: "Debate Competition",
-    description: "Participating in debate competitions",
-    points: 10
-  },
-  {
-    name: "Group Discussion",
-    description: "Participating in group discussions",
-    points: 5
-  }
+// 38 Activities with exact points as per requirements
+const activities = [
+  // Technical Competitions (10 points base)
+  { name: "Technical Competition - College Level", points: 10, level: "college", program: "All" },
+  { name: "Technical Competition - State Level", points: 15, level: "state", program: "All" },
+  { name: "Technical Competition - National Level", points: 20, level: "national", program: "All" },
+  
+  // Hackathons (15 points base)
+  { name: "Hackathon - College Level", points: 15, level: "college", program: "All" },
+  { name: "Hackathon - State Level", points: 22, level: "state", program: "All" },
+  { name: "Hackathon - National Level", points: 30, level: "national", program: "All" },
+  
+  // Coding Competitions (10 points base)
+  { name: "Coding Competition - College Level", points: 10, level: "college", program: "All" },
+  { name: "Coding Competition - State Level", points: 15, level: "state", program: "All" },
+  { name: "Coding Competition - National Level", points: 20, level: "national", program: "All" },
+  
+  // Project Competitions (15 points base)
+  { name: "Project Competition - College Level", points: 15, level: "college", program: "All" },
+  { name: "Project Competition - State Level", points: 22, level: "state", program: "All" },
+  { name: "Project Competition - National Level", points: 30, level: "national", program: "All" },
+  
+  // Paper Presentation (15 points base)
+  { name: "Paper Presentation - College Level", points: 15, level: "college", program: "All" },
+  { name: "Paper Presentation - State Level", points: 22, level: "state", program: "All" },
+  { name: "Paper Presentation - National Level", points: 30, level: "national", program: "All" },
+  
+  // Paper Publication (20 points base)
+  { name: "Paper Publication - College Level", points: 20, level: "college", program: "All" },
+  { name: "Paper Publication - State Level", points: 30, level: "state", program: "All" },
+  { name: "Paper Publication - National Level", points: 40, level: "national", program: "All" },
+  
+  // Patents (25-30 points)
+  { name: "Patent Filed", points: 25, level: "college", program: "All" },
+  { name: "Patent Published", points: 30, level: "state", program: "All" },
+  
+  // MOOC & Certifications (5-10 points)
+  { name: "MOOC Course Completion", points: 5, level: "college", program: "All" },
+  { name: "Professional Certification", points: 10, level: "college", program: "All" },
+  
+  // Sports (5-15 points)
+  { name: "Sports Participation - College Level", points: 5, level: "college", program: "All" },
+  { name: "Sports Winner - College Level", points: 10, level: "college", program: "All" },
+  { name: "Sports Winner - State Level", points: 15, level: "state", program: "All" },
+  { name: "Sports Winner - National Level", points: 20, level: "national", program: "All" },
+  { name: "Sports Captain", points: 15, level: "college", program: "All" },
+  
+  // Cultural Activities (5-15 points)
+  { name: "Cultural Event Participation", points: 5, level: "college", program: "All" },
+  { name: "Cultural Event Winner - College Level", points: 10, level: "college", program: "All" },
+  { name: "Cultural Event Winner - State Level", points: 15, level: "state", program: "All" },
+  { name: "Cultural Event Organization", points: 15, level: "college", program: "All" },
+  
+  // Social Activities (5-10 points)
+  { name: "NSS/NCC Activities", points: 10, level: "college", program: "All" },
+  { name: "Social Campaign Participation", points: 10, level: "college", program: "All" },
+  { name: "Blood Donation", points: 5, level: "college", program: "All" },
+  { name: "Community Service", points: 10, level: "college", program: "All" },
+  
+  // Academic Activities (5-25 points)
+  { name: "Seminar/Workshop Participation", points: 5, level: "college", program: "All" },
+  { name: "Seminar/Workshop Presentation", points: 10, level: "college", program: "All" },
+  { name: "Seminar/Workshop Organization", points: 15, level: "college", program: "All" },
+  { name: "Guest Lecture Attendance", points: 5, level: "college", program: "All" },
+  { name: "Industrial Visit", points: 10, level: "college", program: "All" },
+  { name: "Internship Completion", points: 20, level: "college", program: "All" },
+  { name: "Industrial Training", points: 25, level: "college", program: "All" },
+  { name: "Research Activities", points: 20, level: "college", program: "All" },
+  { name: "Conference Participation", points: 15, level: "college", program: "All" },
+  { name: "Conference Presentation", points: 20, level: "college", program: "All" },
+  { name: "Conference Publication", points: 25, level: "college", program: "All" },
+  { name: "Quiz Competition", points: 10, level: "college", program: "All" },
+  { name: "Debate Competition", points: 10, level: "college", program: "All" },
+  { name: "Group Discussion", points: 5, level: "college", program: "All" }
 ];
 
-for (const category of categories) {
-  const existing = await ActivityCategory.findOne({ name: category.name });
+for (const activity of activities) {
+  const existing = await ActivityCategory.findOne({ name: activity.name });
   if (!existing) {
-    await ActivityCategory.create(category);
-    console.log(`Created category: ${category.name}`);
+    await ActivityCategory.create({
+      name: activity.name,
+      description: activity.name,
+      points: activity.points,
+      level: activity.level,
+      program: activity.program,
+      isActive: true
+    });
+    console.log(`✅ Created activity: ${activity.name} (${activity.points} points)`);
+  } else {
+    console.log(`ℹ️  Activity already exists: ${activity.name}`);
   }
 }
 
-console.log("All activity categories seeded successfully!");
+console.log(`✅ All ${activities.length} activities seeded successfully!`);
 process.exit(0);

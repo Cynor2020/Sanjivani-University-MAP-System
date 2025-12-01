@@ -10,4 +10,7 @@ const ActivityCategorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Index for category lookup
+ActivityCategorySchema.index({ name: 1, isActive: 1 });
+
 export default mongoose.model("ActivityCategory", ActivityCategorySchema);

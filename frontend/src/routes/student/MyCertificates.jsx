@@ -225,11 +225,15 @@ export default function MyCertificates() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {cert.status === "approved" ? (
-                            <span className="font-bold">{cert.pointsAllocated}</span>
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
+                          <span className={`font-bold ${
+                            cert.status === "approved" 
+                              ? "text-green-600" 
+                              : cert.status === "pending" 
+                              ? "text-yellow-600" 
+                              : "text-gray-500"
+                          }`}>
+                            {cert.pointsAllocated || "-"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           {new Date(cert.createdAt).toLocaleDateString()}

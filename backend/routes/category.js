@@ -4,20 +4,24 @@ import { allowRoles } from "../middleware/roleCheck.js";
 import { 
   listCategories, 
   getCategoryById, 
-  upsertCategory, 
-  deleteCategory, 
-  toggleCategoryStatus 
+  createCategory, 
+  getAllCategories, 
+  updateCategory, 
+  deleteCategory 
 } from "../controllers/categoryController.js";
 
 const router = Router();
 
 // Public routes
-router.get("/", requireAuth, listCategories);
-router.get("/:id", requireAuth, getCategoryById);
+router.get("/", listCategories); // Public for registration
 
-// Admin routes - Super Admin only
-router.post("/", requireAuth, allowRoles("super_admin"), upsertCategory);
+// Super Admin routes (must be defined before :id route to avoid conflicts)
+router.post("/", requireAuth, allowRoles("super_admin"), createCategory);
+router.get("/all", requireAuth, allowRoles("super_admin"), getAllCategories);
+router.put("/:id", requireAuth, allowRoles("super_admin"), updateCategory);
 router.delete("/:id", requireAuth, allowRoles("super_admin"), deleteCategory);
-router.patch("/:id/toggle", requireAuth, allowRoles("super_admin"), toggleCategoryStatus);
+
+// Public route for getting category by ID (must be last to avoid conflicts)
+router.get("/:id", getCategoryById);
 
 export default router;

@@ -48,9 +48,8 @@ export default function Login() {
       // Map role to correct route
       const roleRouteMap = {
         super_admin: "/superadmin",
-        director_admin: "/director",
+        director: "/director",
         hod: "/hod",
-        mentor: "/mentor",
         student: "/student"
       };
       

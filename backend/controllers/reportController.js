@@ -1,89 +1,40 @@
 import User from "../models/User.js";
 import Certificate from "../models/Certificate.js";
 import ActivityCategory from "../models/ActivityCategory.js";
-import ProgramRule from "../models/ProgramRule.js";
 import AcademicYear from "../models/AcademicYear.js";
-import Papa from "papaparse";
 
-export const universitySummary = async (req, res) => {
+// HOD: Department Analytics
+export const departmentAnalytics = async (req, res) => {
   try {
-    // Get current academic year
-    const currentAcademicYear = await AcademicYear.findOne({ isActive: true });
-    
-    // Get total counts
-    const totalStudents = await User.countDocuments({ role: "student", status: "active" });
-    const totalAlumni = await User.countDocuments({ role: "student", status: "alumni" });
-    const totalPendingClearance = await User.countDocuments({ role: "student", status: "pending_clearance" });
-    
-    // Get certificate statistics
-    const totalCertificates = await Certificate.countDocuments();
-    const approvedCertificates = await Certificate.countDocuments({ status: "approved" });
-    const pendingCertificates = await Certificate.countDocuments({ status: "pending" });
-    const rejectedCertificates = await Certificate.countDocuments({ status: "rejected" });
-    
-    // Get average points
-    const avgPointsResult = await User.aggregate([
-      {
-        $match: {
-          role: "student",
-          status: "active"
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          avgPoints: { $avg: "$totalPoints" }
-        }
-      }
-    ]);
-    
-    const avgPoints = avgPointsResult.length > 0 ? Math.round(avgPointsResult[0].avgPoints) : 0;
-    
-    res.json({
-      summary: {
-        totalStudents,
-        totalAlumni,
-        totalPendingClearance,
-        totalCertificates,
-        approvedCertificates,
-        pendingCertificates,
-        rejectedCertificates,
-        avgPoints,
-        academicYear: currentAcademicYear?.current || null
-      }
-    });
-  } catch (error) {
-    console.error("Error fetching university summary:", error);
-    res.status(500).json({ error: "Failed to fetch university summary" });
-  }
-};
+    if (!req.user.department) {
+      return res.status(400).json({ error: "HOD must be assigned to a department" });
+    }
 
-export const departmentReport = async (req, res) => {
-  try {
-    const { department, academicYear } = req.query;
-    
-    if (!department) {
-      return res.status(400).json({ error: "Department is required" });
-    }
-    
-    // Build filter for certificates
-    const certFilter = { 
-      'userId.department': department 
-    };
-    
-    if (academicYear) {
-      certFilter.academicYear = academicYear;
-    }
-    
-    // Get department statistics
-    const totalStudents = await User.countDocuments({ 
-      role: "student", 
-      department,
-      status: "active"
-    });
-    
-    // Get certificates grouped by status
-    const certificateStats = await Certificate.aggregate([
+    // Top 10 students
+    const topStudents = await User.find({
+      role: "student",
+      department: req.user.department,
+      status: { $ne: "deleted" }
+    })
+      .select('name prn email totalPoints currentYear')
+      .sort({ totalPoints: -1 })
+      .limit(10)
+      .lean();
+
+    // Weak students (low points)
+    const weakStudents = await User.find({
+      role: "student",
+      department: req.user.department,
+      status: { $ne: "deleted" },
+      totalPoints: { $lt: 50 }
+    })
+      .select('name prn email totalPoints currentYear')
+      .sort({ totalPoints: 1 })
+      .limit(10)
+      .lean();
+
+    // Category-wise chart data
+    const categoryStats = await Certificate.aggregate([
       {
         $lookup: {
           from: "users",
@@ -92,55 +43,11 @@ export const departmentReport = async (req, res) => {
           as: "user"
         }
       },
-      {
-        $unwind: "$user"
-      },
+      { $unwind: "$user" },
       {
         $match: {
-          "user.department": department,
-          ...(academicYear && { academicYear: academicYear })
-        }
-      },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-          totalPoints: { $sum: "$pointsAllocated" }
-        }
-      }
-    ]);
-    
-    // Format certificate stats
-    const formattedStats = {
-      approved: 0,
-      pending: 0,
-      rejected: 0,
-      totalPoints: 0
-    };
-    
-    certificateStats.forEach(stat => {
-      formattedStats[stat._id] = stat.count;
-      formattedStats.totalPoints += stat.totalPoints;
-    });
-    
-    // Get top categories
-    const topCategories = await Certificate.aggregate([
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
-      {
-        $unwind: "$user"
-      },
-      {
-        $match: {
-          "user.department": department,
-          status: "approved",
-          ...(academicYear && { academicYear: academicYear })
+          "user.department": req.user.department,
+          status: "approved"
         }
       },
       {
@@ -150,353 +57,85 @@ export const departmentReport = async (req, res) => {
           totalPoints: { $sum: "$pointsAllocated" }
         }
       },
+      { $sort: { totalPoints: -1 } }
+    ]);
+
+    // Department stats
+    const totalStudents = await User.countDocuments({
+      role: "student",
+      department: req.user.department,
+      status: { $ne: "deleted" }
+    });
+
+    const avgPoints = await User.aggregate([
       {
-        $sort: { totalPoints: -1 }
+        $match: {
+          role: "student",
+          department: req.user.department,
+          status: { $ne: "deleted" }
+        }
       },
       {
-        $limit: 10
+        $group: {
+          _id: null,
+          avg: { $avg: "$totalPoints" }
+        }
       }
     ]);
-    
+
     res.json({
-      department,
-      academicYear: academicYear || null,
+      topStudents,
+      weakStudents,
+      categoryStats,
       stats: {
         totalStudents,
-        certificates: formattedStats,
-        topCategories
+        avgPoints: avgPoints[0]?.avg ? Math.round(avgPoints[0].avg) : 0
       }
     });
   } catch (error) {
-    console.error("Error fetching department report:", error);
-    res.status(500).json({ error: "Failed to fetch department report" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-export const performanceVsStrength = async (req, res) => {
-  try {
-    // Get all departments with student counts and average points
-    const departmentPerformance = await User.aggregate([
-      {
-        $match: {
-          role: "student",
-          status: "active"
-        }
-      },
-      {
-        $group: {
-          _id: "$department",
-          studentCount: { $sum: 1 },
-          avgPoints: { $avg: "$totalPoints" },
-          totalPoints: { $sum: "$totalPoints" }
-        }
-      },
-      {
-        $sort: { studentCount: -1 }
-      }
-    ]);
-    
-    // Format the data
-    const performanceData = departmentPerformance.map(dept => ({
-      department: dept._id,
-      studentCount: dept.studentCount,
-      avgPoints: Math.round(dept.avgPoints),
-      totalPoints: dept.totalPoints,
-      performanceIndex: dept.studentCount > 0 ? Math.round((dept.totalPoints / dept.studentCount) * 100) / 100 : 0
-    }));
-    
-    res.json({ performanceData });
-  } catch (error) {
-    console.error("Error fetching performance vs strength data:", error);
-    res.status(500).json({ error: "Failed to fetch performance vs strength data" });
-  }
-};
-
-export const topWeakBranches = async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    
-    // Get departments sorted by average points (ascending for weak branches)
-    const weakBranches = await User.aggregate([
-      {
-        $match: {
-          role: "student",
-          status: "active"
-        }
-      },
-      {
-        $group: {
-          _id: "$department",
-          studentCount: { $sum: 1 },
-          avgPoints: { $avg: "$totalPoints" },
-          totalPoints: { $sum: "$totalPoints" }
-        }
-      },
-      {
-        $sort: { avgPoints: 1 }
-      },
-      {
-        $limit: parseInt(limit)
-      }
-    ]);
-    
-    // Get departments sorted by average points (descending for top branches)
-    const topBranches = await User.aggregate([
-      {
-        $match: {
-          role: "student",
-          status: "active"
-        }
-      },
-      {
-        $group: {
-          _id: "$department",
-          studentCount: { $sum: 1 },
-          avgPoints: { $avg: "$totalPoints" },
-          totalPoints: { $sum: "$totalPoints" }
-        }
-      },
-      {
-        $sort: { avgPoints: -1 }
-      },
-      {
-        $limit: parseInt(limit)
-      }
-    ]);
-    
-    res.json({
-      topBranches: topBranches.map(branch => ({
-        department: branch._id,
-        studentCount: branch.studentCount,
-        avgPoints: Math.round(branch.avgPoints),
-        totalPoints: branch.totalPoints
-      })),
-      weakBranches: weakBranches.map(branch => ({
-        department: branch._id,
-        studentCount: branch.studentCount,
-        avgPoints: Math.round(branch.avgPoints),
-        totalPoints: branch.totalPoints
-      }))
-    });
-  } catch (error) {
-    console.error("Error fetching top/weak branches data:", error);
-    res.status(500).json({ error: "Failed to fetch top/weak branches data" });
-  }
-};
-
-export const studentLeaderboard = async (req, res) => {
-  try {
-    const { department, limit = 100 } = req.query;
-    
-    // Build filter
-    const filter = { 
-      role: "student", 
-      status: "active" 
-    };
-    
-    if (department) {
-      filter.department = department;
-    }
-    
-    // Get top students by points
-    const topStudents = await User.find(filter)
-      .select('name email enrollmentNumber department division totalPoints program currentYear')
-      .sort({ totalPoints: -1 })
-      .limit(parseInt(limit))
-      .lean();
-    
-    res.json({ students: topStudents });
-  } catch (error) {
-    console.error("Error fetching student leaderboard:", error);
-    res.status(500).json({ error: "Failed to fetch student leaderboard" });
-  }
-};
-
-export const exportDepartmentCSV = async (req, res) => {
-  try {
-    const { department, academicYear } = req.query;
-    
-    if (!department) {
-      return res.status(400).json({ error: "Department is required" });
-    }
-    
-    // Build filter for certificates
-    const certFilter = { 
-      'userId.department': department 
-    };
-    
-    if (academicYear) {
-      certFilter.academicYear = academicYear;
-    }
-    
-    // Get students in department
-    const students = await User.find({ 
-      role: "student", 
-      department,
-      status: "active"
-    }).lean();
-    
-    // Get certificates for department
-    const certificates = await Certificate.aggregate([
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
-      {
-        $unwind: "$user"
-      },
-      {
-        $match: {
-          "user.department": department,
-          ...(academicYear && { academicYear: academicYear })
-        }
-      }
-    ]);
-    
-    // Prepare data for CSV
-    const csvData = students.map(student => {
-      // Count student's certificates
-      const studentCerts = certificates.filter(cert => 
-        cert.userId.toString() === student._id.toString()
-      );
-      
-      const approvedCerts = studentCerts.filter(c => c.status === "approved");
-      const pendingCerts = studentCerts.filter(c => c.status === "pending");
-      const rejectedCerts = studentCerts.filter(c => c.status === "rejected");
-      
-      return {
-        "Enrollment Number": student.enrollmentNumber || "",
-        "Name": student.name,
-        "Email": student.email,
-        "Program": student.program,
-        "Current Year": student.currentYear,
-        "Total Points": student.totalPoints,
-        "Approved Certificates": approvedCerts.length,
-        "Pending Certificates": pendingCerts.length,
-        "Rejected Certificates": rejectedCerts.length
-      };
-    });
-    
-    // Generate CSV
-    const csv = Papa.unparse(csvData);
-    
-    // Set headers for download
-    res.header('Content-Type', 'text/csv');
-    res.attachment(`department_${department}_report.csv`);
-    return res.send(csv);
-  } catch (error) {
-    console.error("Error exporting department CSV:", error);
-    res.status(500).json({ error: "Failed to export department CSV" });
-  }
-};
-
-export const exportUniversityCSV = async (req, res) => {
-  try {
-    // Get all students
-    const students = await User.find({ 
-      role: "student"
-    }).lean();
-    
-    // Get all certificates
-    const certificates = await Certificate.find().populate('userId', 'department');
-    
-    // Prepare data for CSV
-    const csvData = students.map(student => {
-      // Count student's certificates
-      const studentCerts = certificates.filter(cert => 
-        cert.userId && cert.userId._id.toString() === student._id.toString()
-      );
-      
-      const approvedCerts = studentCerts.filter(c => c.status === "approved");
-      const pendingCerts = studentCerts.filter(c => c.status === "pending");
-      const rejectedCerts = studentCerts.filter(c => c.status === "rejected");
-      
-      return {
-        "Enrollment Number": student.enrollmentNumber || "",
-        "Name": student.name,
-        "Email": student.email,
-        "Department": student.department,
-        "Program": student.program,
-        "Current Year": student.currentYear,
-        "Status": student.status,
-        "Total Points": student.totalPoints,
-        "Approved Certificates": approvedCerts.length,
-        "Pending Certificates": pendingCerts.length,
-        "Rejected Certificates": rejectedCerts.length
-      };
-    });
-    
-    // Generate CSV
-    const csv = Papa.unparse(csvData);
-    
-    // Set headers for download
-    res.header('Content-Type', 'text/csv');
-    res.attachment('university_report.csv');
-    return res.send(csv);
-  } catch (error) {
-    console.error("Error exporting university CSV:", error);
-    res.status(500).json({ error: "Failed to export university CSV" });
-  }
-};
-
+// Super Admin: Excellence Awards Generator
 export const generateExcellenceAwards = async (req, res) => {
   try {
-    const { awardType } = req.query; // silver, gold, platinum
-    
-    // Define thresholds
-    const thresholds = {
-      silver: 50,
-      gold: 75,
-      platinum: 90
-    };
-    
-    const threshold = thresholds[awardType] || thresholds.gold;
-    
-    // Get eligible students
-    const eligibleStudents = await User.find({ 
+    const students = await User.find({
       role: "student",
-      status: "active",
-      totalPoints: { $gte: threshold }
+      status: { $ne: "deleted" }
     })
-    .select('name email enrollmentNumber department program totalPoints')
-    .sort({ totalPoints: -1 })
-    .lean();
-    
-    // Calculate awards and amounts
-    const awardedStudents = eligibleStudents.map(student => {
-      let award = "";
-      let amount = 0;
-      
-      if (student.totalPoints >= 90) {
-        award = "Platinum";
-        amount = 10000;
-      } else if (student.totalPoints >= 75) {
-        award = "Gold";
-        amount = 5000;
-      } else if (student.totalPoints >= 50) {
-        award = "Silver";
-        amount = 2000;
+      .select('name prn email department totalPoints')
+      .sort({ totalPoints: -1 })
+      .lean();
+
+    const awards = {
+      platinum: students.filter(s => s.totalPoints >= 300).map(s => ({
+        ...s,
+        award: "Platinum",
+        amount: 10000
+      })),
+      gold: students.filter(s => s.totalPoints >= 250 && s.totalPoints < 300).map(s => ({
+        ...s,
+        award: "Gold",
+        amount: 5000
+      })),
+      silver: students.filter(s => s.totalPoints >= 200 && s.totalPoints < 250).map(s => ({
+        ...s,
+        award: "Silver",
+        amount: 3000
+      }))
+    };
+
+    res.json({
+      awards,
+      summary: {
+        platinum: awards.platinum.length,
+        gold: awards.gold.length,
+        silver: awards.silver.length,
+        total: awards.platinum.length + awards.gold.length + awards.silver.length
       }
-      
-      return {
-        ...student,
-        award,
-        amount
-      };
-    });
-    
-    res.json({ 
-      awardedStudents,
-      awardType,
-      threshold,
-      totalAwarded: awardedStudents.length
     });
   } catch (error) {
-    console.error("Error generating excellence awards:", error);
-    res.status(500).json({ error: "Failed to generate excellence awards" });
+    res.status(500).json({ error: error.message });
   }
 };

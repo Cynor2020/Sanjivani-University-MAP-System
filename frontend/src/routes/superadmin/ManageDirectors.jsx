@@ -1,274 +1,214 @@
-import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { UserPlus, Trash2, Edit } from "lucide-react";
 
 export default function ManageDirectors() {
-  const [directors, setDirectors] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingDirector, setEditingDirector] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    department: "",
-    password: ""
+    password: "",
+    mobile: "",
+    whatsapp: "",
+    address: "",
+    designation: ""
   });
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch directors
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["directors", page, search],
+  const { data, isLoading } = useQuery({
+    queryKey: ["directors"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users?role=director_admin&page=${page}&limit=10&search=${search}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/directors`, {
         credentials: "include"
       });
       return res.json();
     }
   });
 
-  useEffect(() => {
-    if (data?.users) {
-      setDirectors(data.users);
-    }
-  }, [data]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const url = editingDirector 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/users/${editingDirector._id}` 
-        : `${import.meta.env.VITE_BACKEND_URL}/api/users`;
-      
-      const method = editingDirector ? "PUT" : "POST";
-      
-      const requestData = { ...formData, role: "director_admin" };
-      
-      // Remove password field if empty when editing
-      if (editingDirector && !formData.password) {
-        delete requestData.password;
-      }
-      
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(requestData)
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const formDataObj = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key !== 'profilePhoto' && data[key]) {
+          formDataObj.append(key, data[key]);
+        }
       });
-      
-      const result = await res.json();
-      
-      if (res.ok) {
-        toast.success(editingDirector ? "Director updated successfully" : "Director created successfully");
-        setShowForm(false);
-        setEditingDirector(null);
-        setFormData({
-          name: "",
-          email: "",
-          department: "",
-          password: ""
-        });
-        refetch();
-        queryClient.invalidateQueries(["directors"]);
-      } else {
-        toast.error(result.error || "Failed to save director");
+      if (profilePhoto) {
+        formDataObj.append('profilePhoto', profilePhoto);
       }
-    } catch (error) {
-      toast.error("Failed to save director");
-    }
-  };
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/directors`, {
+        method: "POST",
+        credentials: "include",
+        body: formDataObj
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["directors"]);
+      toast.success("Director created successfully");
+      setShowForm(false);
+      setFormData({ name: "", email: "", password: "", mobile: "", whatsapp: "", address: "", designation: "" });
+      setProfilePhoto(null);
+      setPreviewUrl("");
+    },
+    onError: (error) => toast.error(error.message || "Failed to create director")
+  });
 
-  const handleEdit = (director) => {
-    setEditingDirector(director);
-    setFormData({
-      name: director.name,
-      email: director.email,
-      department: director.department || "",
-      password: ""
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this director?")) {
-      return;
-    }
-    
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}`, {
         method: "DELETE",
         credentials: "include"
       });
-      
-      const result = await res.json();
-      
-      if (res.ok) {
-        toast.success("Director deleted successfully");
-        refetch();
-        queryClient.invalidateQueries(["directors"]);
-      } else {
-        toast.error(result.error || "Failed to delete director");
-      }
-    } catch (error) {
-      toast.error("Failed to delete director");
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["directors"]);
+      toast.success("Director deleted");
+    },
+    onError: () => toast.error("Failed to delete")
+  });
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePhoto(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
-  // Function to set password for directors without one
-  const handleSetPassword = async (directorId, directorName) => {
-    const password = prompt(`Enter new password for ${directorName}:`);
-    if (!password) return;
-    
-    if (password.length < 6) {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (formData.password.length < 6) {
       toast.error("Password must be at least 6 characters long");
       return;
     }
-    
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${directorId}/password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ password })
-      });
-      
-      const result = await res.json();
-      
-      if (res.ok) {
-        toast.success("Password set successfully");
-        refetch();
-        queryClient.invalidateQueries(["directors"]);
-      } else {
-        toast.error(result.error || "Failed to set password");
-      }
-    } catch (error) {
-      toast.error("Failed to set password");
-    }
+    createMutation.mutate(formData);
   };
 
-  const resetForm = () => {
-    setShowForm(false);
-    setEditingDirector(null);
-    setFormData({
-      name: "",
-      email: "",
-      department: "",
-      password: ""
-    });
-  };
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Manage Directors</h1>
-        <Button onClick={() => setShowForm(true)}>
-          Add New Director
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Manage Directors</h1>
+          <p className="text-gray-600 mt-2">Create and manage directors</p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Director
         </Button>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Search directors by name or email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 border rounded p-2"
-            />
-            <Button onClick={() => setPage(1)}>Search</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Director Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{editingDirector ? "Edit Director" : "Add New Director"}</CardTitle>
+            <CardTitle>Add Director</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Full Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
                     required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                   <input
                     type="email"
-                    name="email"
+                    required
                     value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required
-                    disabled={!!editingDirector}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Department *</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {editingDirector ? "New Password (optional)" : "Password *"}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                   <input
                     type="password"
-                    name="password"
+                    required
                     value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full border rounded p-2"
-                    required={!editingDirector}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter password (min 6 characters)"
+                    minLength={6}
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
+                  <input
+                    type="text"
+                    value={formData.mobile}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Designation</label>
+                  <input
+                    type="text"
+                    value={formData.designation}
+                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  {previewUrl && (
+                    <div className="mt-2">
+                      <img src={previewUrl} alt="Preview" className="h-24 w-24 object-cover rounded-lg border" />
+                    </div>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Button type="submit">
-                  {editingDirector ? "Update Director" : "Create Director"}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+              <div className="flex space-x-2">
+                <Button type="submit">Create Director</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancel
                 </Button>
               </div>
@@ -277,107 +217,60 @@ export default function ManageDirectors() {
         </Card>
       )}
 
-      {/* Directors Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Directors</CardTitle>
+          <CardTitle>Directors ({data?.directors?.length || 0})</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Loading directors...</p>
-          ) : directors.length === 0 ? (
-            <p className="text-center py-4">No directors found</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Password Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {directors.map((director) => (
-                      <TableRow key={director._id}>
-                        <TableCell className="font-medium">{director.name}</TableCell>
-                        <TableCell>{director.email}</TableCell>
-                        <TableCell>{director.department}</TableCell>
-                        <TableCell>
-                          {new Date(director.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          {director.passwordHash ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Set
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Not Set
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleEdit(director)}
-                            >
-                              Edit
-                            </Button>
-                            {!director.passwordHash && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleSetPassword(director._id, director.name)}
-                              >
-                                Set Password
-                              </Button>
-                            )}
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              onClick={() => handleDelete(director._id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Pagination */}
-              {data?.pagination && data.pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Page {data.pagination.currentPage} of {data.pagination.totalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setPage(page - 1)}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      onClick={() => setPage(page + 1)}
-                      disabled={page === data.pagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Photo</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Email</th>
+                  <th className="text-left p-3">Mobile</th>
+                  <th className="text-left p-3">Designation</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.directors?.map((director) => (
+                  <tr key={director._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">
+                      {director.profilePhoto ? (
+                        <img src={director.profilePhoto} alt={director.name} className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                          {director.name.charAt(0)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3">{director.name}</td>
+                    <td className="p-3">{director.email}</td>
+                    <td className="p-3">{director.mobile || "-"}</td>
+                    <td className="p-3">{director.designation || "-"}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (window.confirm(`Delete ${director.name}?`)) {
+                            deleteMutation.mutate(director._id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(!data?.directors || data.directors.length === 0) && (
+              <div className="text-center py-8 text-gray-500">No directors found</div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

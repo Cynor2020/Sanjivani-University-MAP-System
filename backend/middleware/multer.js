@@ -30,12 +30,36 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Profile photo filter (images only)
+const profilePhotoFilter = (req, file, cb) => {
+  const allowedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png'
+  ];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG and PNG images are allowed for profile photos.'), false);
+  }
+};
+
 // Create multer instance
 export const upload = multer({ 
   storage: storage,
   fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Profile photo upload (images only, 2MB limit)
+export const uploadProfilePhoto = multer({ 
+  storage: storage,
+  fileFilter: profilePhotoFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB limit for profile photos
   }
 });
 

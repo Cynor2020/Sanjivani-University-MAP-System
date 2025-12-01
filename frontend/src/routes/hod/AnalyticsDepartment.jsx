@@ -1,8 +1,5 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import toast from "react-hot-toast";
 import {
   BarChart,
   Bar,
@@ -14,261 +11,137 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  LineChart,
-  Line
+  Cell
 } from "recharts";
 
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
 export default function AnalyticsDepartment() {
-  const [academicYear, setAcademicYear] = useState("");
-  const [departmentStats, setDepartmentStats] = useState(null);
-  const [certificateStats, setCertificateStats] = useState(null);
-  const [topCategories, setTopCategories] = useState([]);
-
-  // Fetch current academic year
-  const { data: academicYearData } = useQuery({
-    queryKey: ["currentAcademicYear"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["departmentAnalytics"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/academic-year/current`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department-analytics`, {
         credentials: "include"
       });
       return res.json();
     }
   });
 
-  useEffect(() => {
-    if (academicYearData?.year) {
-      setAcademicYear(academicYearData.year);
-    }
-  }, [academicYearData]);
-
-  // Fetch department stats
-  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ["departmentStats", academicYear],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department?department=${encodeURIComponent(getUserDepartment())}&academicYear=${academicYear}`, {
-        credentials: "include"
-      });
-      return res.json();
-    },
-    enabled: !!academicYear
-  });
-
-  useEffect(() => {
-    if (statsData?.stats) {
-      setDepartmentStats(statsData.stats);
-      setCertificateStats(statsData.stats.certificates);
-      setTopCategories(statsData.stats.topCategories || []);
-    }
-  }, [statsData]);
-
-  const getUserDepartment = () => {
-    // In a real implementation, this would come from the user context
-    return "Computer Engineering"; // Placeholder
-  };
-
-  const exportToCSV = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/department/export?department=${encodeURIComponent(getUserDepartment())}&academicYear=${academicYear}`, {
-        credentials: "include"
-      });
-      
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `department_${getUserDepartment()}_report.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        toast.success("Report exported successfully");
-      } else {
-        toast.error("Failed to export report");
-      }
-    } catch (error) {
-      toast.error("Failed to export report");
-    }
-  };
-
-  // Chart colors
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Department Analytics</h1>
-        <Button onClick={exportToCSV} variant="outline">
-          Export to CSV
-        </Button>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Department Analytics</h1>
+        <p className="text-gray-600 mt-2">Comprehensive analytics for your department</p>
       </div>
 
-      {/* Academic Year Filter */}
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Department Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Students:</span>
+                <span className="font-bold text-lg">{data?.stats?.totalStudents || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Average Points:</span>
+                <span className="font-bold text-lg">{data?.stats?.avgPoints || 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top 10 Students */}
       <Card>
         <CardHeader>
-          <CardTitle>Filter by Academic Year</CardTitle>
+          <CardTitle>Top 10 Students</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Enter academic year (e.g., 2025-26)"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-              className="border rounded p-2"
-            />
-            <Button onClick={refetchStats}>Apply Filter</Button>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Rank</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">PRN</th>
+                  <th className="text-left p-3">Year</th>
+                  <th className="text-left p-3">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.topStudents?.map((student, idx) => (
+                  <tr key={student._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-bold">#{idx + 1}</td>
+                    <td className="p-3">{student.name}</td>
+                    <td className="p-3">{student.prn}</td>
+                    <td className="p-3">{student.currentYear}</td>
+                    <td className="p-3 font-semibold text-blue-600">{student.totalPoints || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Department Stats */}
-      {statsLoading ? (
-        <p>Loading department statistics...</p>
-      ) : departmentStats ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-500">Total Students</p>
-              <p className="text-3xl font-bold text-blue-600">{departmentStats.totalStudents}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-500">Approved Certificates</p>
-              <p className="text-3xl font-bold text-green-600">{certificateStats?.approved || 0}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-500">Pending Certificates</p>
-              <p className="text-3xl font-bold text-yellow-600">{certificateStats?.pending || 0}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-gray-500">Rejected Certificates</p>
-              <p className="text-3xl font-bold text-red-600">{certificateStats?.rejected || 0}</p>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-
-      {/* Certificate Statistics */}
-      {certificateStats && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Certificate Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Approved', value: certificateStats.approved },
-                        { name: 'Pending', value: certificateStats.pending },
-                        { name: 'Rejected', value: certificateStats.rejected }
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {[
-                        { name: 'Approved', value: certificateStats.approved },
-                        { name: 'Pending', value: certificateStats.pending },
-                        { name: 'Rejected', value: certificateStats.rejected }
-                      ].map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={
-                            entry.name === 'Approved' ? '#10B981' : 
-                            entry.name === 'Pending' ? '#F59E0B' : 
-                            '#EF4444'
-                          } 
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Activity Categories</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={topCategories}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="_id" 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="count" name="Certificate Count" fill="#8884d8" />
-                    <Bar dataKey="totalPoints" name="Total Points" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Top Categories Table */}
-      {topCategories.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Activity Categories Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4">Category</th>
-                    <th className="text-left p-4">Certificates</th>
-                    <th className="text-left p-4">Total Points</th>
-                    <th className="text-left p-4">Avg Points per Certificate</th>
+      {/* Weak Students */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Students Needing Attention</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">PRN</th>
+                  <th className="text-left p-3">Year</th>
+                  <th className="text-left p-3">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.weakStudents?.map((student) => (
+                  <tr key={student._id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{student.name}</td>
+                    <td className="p-3">{student.prn}</td>
+                    <td className="p-3">{student.currentYear}</td>
+                    <td className="p-3 font-semibold text-red-600">{student.totalPoints || 0}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {topCategories.map((category, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-4 font-medium">{category._id}</td>
-                      <td className="p-4">{category.count}</td>
-                      <td className="p-4">{category.totalPoints}</td>
-                      <td className="p-4">
-                        {category.count > 0 
-                          ? (category.totalPoints / category.count).toFixed(2) 
-                          : 0}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Category-wise Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Category-wise Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data?.categoryStats || []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="_id" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#3b82f6" />
+              <Bar dataKey="totalPoints" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }

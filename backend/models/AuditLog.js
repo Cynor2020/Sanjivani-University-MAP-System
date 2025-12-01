@@ -3,18 +3,16 @@ import mongoose from "mongoose";
 const AuditLogSchema = new mongoose.Schema(
   {
     timestamp: { type: Date, default: Date.now },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    username: { type: String },
-    email: { type: String },
-    role: { type: String },
-    ip: { type: String },
-    userAgent: { type: String },
+    ip: { type: String, required: true },
     action: { type: String, required: true },
-    details: { type: Object, default: {} },
-    resourceId: { type: mongoose.Schema.Types.ObjectId },
-    resourceType: { type: String }
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    details: { type: String }
   },
   { timestamps: true }
 );
+
+// Index for timestamp queries
+AuditLogSchema.index({ timestamp: -1 });
+AuditLogSchema.index({ ip: 1 });
 
 export default mongoose.model("AuditLog", AuditLogSchema);

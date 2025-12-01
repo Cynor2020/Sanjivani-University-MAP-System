@@ -3,32 +3,24 @@ import { requireAuth } from "../middleware/auth.js";
 import { allowRoles } from "../middleware/roleCheck.js";
 import { upload } from "../middleware/multer.js";
 import { 
+  checkUploadStatus,
   uploadCertificate, 
   myCertificates, 
-  pendingCertificatesHOD,
+  pendingCertificates,
   approveCertificate, 
-  rejectCertificate,
-  getCertificateById,
-  deleteCertificate,
-  getUserProgress
+  rejectCertificate
 } from "../controllers/certificateController.js";
 
 const router = Router();
 
 // Student routes
+router.get("/upload-status", requireAuth, allowRoles("student"), checkUploadStatus);
 router.post("/upload", requireAuth, allowRoles("student"), upload.single('file'), uploadCertificate);
 router.get("/mine", requireAuth, allowRoles("student"), myCertificates);
-router.delete("/:id", requireAuth, allowRoles("student", "super_admin", "director_admin", "hod"), deleteCertificate);
 
 // HOD routes
-router.post("/approve", requireAuth, allowRoles("hod", "director_admin"), approveCertificate);
-router.post("/reject", requireAuth, allowRoles("hod", "director_admin"), rejectCertificate);
-router.get("/pending/hod", requireAuth, allowRoles("hod", "director_admin"), pendingCertificatesHOD);
-
-// Admin routes
-router.get("/:id", requireAuth, allowRoles("student", "hod", "director_admin", "super_admin"), getCertificateById);
-
-// Progress tracking
-router.get("/progress/:userId", requireAuth, allowRoles("student", "hod", "director_admin", "super_admin"), getUserProgress);
+router.get("/pending", requireAuth, allowRoles("hod"), pendingCertificates);
+router.post("/:certificateId/approve", requireAuth, allowRoles("hod"), approveCertificate);
+router.post("/:certificateId/reject", requireAuth, allowRoles("hod"), rejectCertificate);
 
 export default router;

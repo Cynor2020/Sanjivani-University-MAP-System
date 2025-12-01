@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed:programs": "node seed/seedPrograms.js",
-    "seed:activities": "node seed/seedActivities.js",
-    "seed:superadmin": "node seed/seedSuperAdmin.js"
+    "seed:all": "node seed/seedAll.js",
+    "seed:superadmin": "node seed/seedSuperAdmin.js",
+    "seed:departments": "node seed/seedDepartments.js",
+    "seed:activities": "node seed/seedActivities.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

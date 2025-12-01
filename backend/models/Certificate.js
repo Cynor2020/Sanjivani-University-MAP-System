@@ -13,14 +13,6 @@ const CertificateSchema = new mongoose.Schema(
     rejectionReason: { type: String },
     cloudinaryPublicId: { type: String },
     cloudinaryUrl: { type: String },
-    uploadedBy: { type: String },
-    hodId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    // Additional metadata
-    eventName: { type: String },
-    eventDate: { type: Date },
-    organizer: { type: String },
-    certificateNumber: { type: String },
-    // Approval details
     approvedAt: { type: Date },
     rejectedAt: { type: Date },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -28,5 +20,10 @@ const CertificateSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Indexes for performance
+CertificateSchema.index({ userId: 1, academicYear: 1, status: 1 });
+CertificateSchema.index({ status: 1, academicYear: 1 });
+CertificateSchema.index({ department: 1, status: 1 });
 
 export default mongoose.model("Certificate", CertificateSchema);

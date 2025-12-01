@@ -1,179 +1,206 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import toast from "react-hot-toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { Award, Trophy, Medal } from "lucide-react";
 
 export default function ExcellenceAwardsGenerator() {
-  const [awardType, setAwardType] = useState("gold");
-  const [awardedStudents, setAwardedStudents] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const generateAwards = async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["excellenceAwards"],
+    queryFn: async () => {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/reports/excellence-awards?awardType=${awardType}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/reports/excellence-awards`,
         { credentials: "include" }
       );
-      const data = await res.json();
-      
-      if (res.ok) {
-        setAwardedStudents(data.awardedStudents || []);
-        toast.success(`Generated ${data.totalAwarded} excellence awards`);
-      } else {
-        toast.error(data.error || "Failed to generate awards");
-      }
-    } catch (error) {
-      toast.error("Failed to generate awards");
-    } finally {
-      setLoading(false);
+      return res.json();
     }
-  };
+  });
 
-  const exportToPDF = () => {
-    // In a real implementation, this would generate a PDF
-    toast.success("PDF export functionality would be implemented here");
-  };
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Excellence Awards Generator</h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Excellence Awards</h1>
+        <p className="text-gray-600 mt-2">Generate excellence awards for outstanding students</p>
       </div>
 
-      {/* Award Type Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generate Excellence Awards</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Award Type</label>
-              <select
-                value={awardType}
-                onChange={(e) => setAwardType(e.target.value)}
-                className="border rounded p-2"
-              >
-                <option value="silver">Silver (50+ points)</option>
-                <option value="gold">Gold (75+ points)</option>
-                <option value="platinum">Platinum (90+ points)</option>
-              </select>
+      {/* Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-yellow-800">Silver (200+)</p>
+                <p className="text-3xl font-bold text-yellow-900 mt-2">
+                  {data?.awards?.silver?.length || 0}
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">₹3,000 each</p>
+              </div>
+              <Medal className="h-12 w-12 text-yellow-600" />
             </div>
-            <Button 
-              onClick={generateAwards} 
-              disabled={loading}
-              className="mt-6"
-            >
-              {loading ? "Generating..." : "Generate Awards"}
-            </Button>
-            {awardedStudents.length > 0 && (
-              <Button 
-                onClick={exportToPDF} 
-                variant="outline"
-                className="mt-6"
-              >
-                Export to PDF
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Awarded Students */}
-      {awardedStudents.length > 0 && (
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-amber-800">Gold (250+)</p>
+                <p className="text-3xl font-bold text-amber-900 mt-2">
+                  {data?.awards?.gold?.length || 0}
+                </p>
+                <p className="text-xs text-amber-700 mt-1">₹5,000 each</p>
+              </div>
+              <Trophy className="h-12 w-12 text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-800">Platinum (300+)</p>
+                <p className="text-3xl font-bold text-purple-900 mt-2">
+                  {data?.awards?.platinum?.length || 0}
+                </p>
+                <p className="text-xs text-purple-700 mt-1">₹10,000 each</p>
+              </div>
+              <Award className="h-12 w-12 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Platinum Awards */}
+      {data?.awards?.platinum && data.awards.platinum.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {awardType.charAt(0).toUpperCase() + awardType.slice(1)} Award Recipients
-              <span className="text-sm font-normal ml-2">
-                ({awardedStudents.length} students)
-              </span>
+            <CardTitle className="flex items-center space-x-2">
+              <Award className="h-5 w-5 text-purple-600" />
+              <span>Platinum Awards (300+ Points) - ₹10,000</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Enrollment Number</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Program</TableHead>
-                    <TableHead>Total Points</TableHead>
-                    <TableHead>Award</TableHead>
-                    <TableHead>Amount (₹)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {awardedStudents.map((student) => (
-                    <TableRow key={student._id}>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.email}</TableCell>
-                      <TableCell>{student.enrollmentNumber || "N/A"}</TableCell>
-                      <TableCell>{student.department}</TableCell>
-                      <TableCell>{student.program}</TableCell>
-                      <TableCell>
-                        <span className="font-bold">{student.totalPoints}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          student.award === "Platinum" 
-                            ? "bg-purple-100 text-purple-800" 
-                            : student.award === "Gold" 
-                            ? "bg-yellow-100 text-yellow-800" 
-                            : "bg-gray-100 text-gray-800"
-                        }`}>
-                          {student.award}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-bold">
-                        ₹{student.amount.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3">Name</th>
+                    <th className="text-left p-3">PRN</th>
+                    <th className="text-left p-3">Department</th>
+                    <th className="text-left p-3">Points</th>
+                    <th className="text-left p-3">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.awards.platinum.map((student) => (
+                    <tr key={student._id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-semibold">{student.name}</td>
+                      <td className="p-3">{student.prn}</td>
+                      <td className="p-3">{student.department?.name || "-"}</td>
+                      <td className="p-3 font-bold text-purple-600">{student.totalPoints}</td>
+                      <td className="p-3 font-bold">₹10,000</td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Award Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Award Criteria</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border rounded p-4">
-              <h3 className="font-bold text-lg text-gray-800">Silver Award</h3>
-              <p className="text-2xl font-bold text-gray-600 mt-2">50+ Points</p>
-              <p className="mt-2">Cash Reward: ₹2,000</p>
+      {/* Gold Awards */}
+      {data?.awards?.gold && data.awards.gold.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Trophy className="h-5 w-5 text-amber-600" />
+              <span>Gold Awards (250+ Points) - ₹5,000</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3">Name</th>
+                    <th className="text-left p-3">PRN</th>
+                    <th className="text-left p-3">Department</th>
+                    <th className="text-left p-3">Points</th>
+                    <th className="text-left p-3">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.awards.gold.map((student) => (
+                    <tr key={student._id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-semibold">{student.name}</td>
+                      <td className="p-3">{student.prn}</td>
+                      <td className="p-3">{student.department?.name || "-"}</td>
+                      <td className="p-3 font-bold text-amber-600">{student.totalPoints}</td>
+                      <td className="p-3 font-bold">₹5,000</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="border rounded p-4">
-              <h3 className="font-bold text-lg text-yellow-600">Gold Award</h3>
-              <p className="text-2xl font-bold text-yellow-600 mt-2">75+ Points</p>
-              <p className="mt-2">Cash Reward: ₹5,000</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Silver Awards */}
+      {data?.awards?.silver && data.awards.silver.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Medal className="h-5 w-5 text-yellow-600" />
+              <span>Silver Awards (200+ Points) - ₹3,000</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3">Name</th>
+                    <th className="text-left p-3">PRN</th>
+                    <th className="text-left p-3">Department</th>
+                    <th className="text-left p-3">Points</th>
+                    <th className="text-left p-3">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.awards.silver.map((student) => (
+                    <tr key={student._id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-semibold">{student.name}</td>
+                      <td className="p-3">{student.prn}</td>
+                      <td className="p-3">{student.department?.name || "-"}</td>
+                      <td className="p-3 font-bold text-yellow-600">{student.totalPoints}</td>
+                      <td className="p-3 font-bold">₹3,000</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="border rounded p-4">
-              <h3 className="font-bold text-lg text-purple-600">Platinum Award</h3>
-              <p className="text-2xl font-bold text-purple-600 mt-2">90+ Points</p>
-              <p className="mt-2">Cash Reward: ₹10,000</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {data?.summary && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-900">
+                Total Awards: {data.summary.total}
+              </p>
+              <p className="text-sm text-blue-700 mt-2">
+                Platinum: {data.summary.platinum} | Gold: {data.summary.gold} | Silver: {data.summary.silver}
+              </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

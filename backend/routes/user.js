@@ -1,36 +1,49 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { allowRoles } from "../middleware/roleCheck.js";
+import { uploadProfilePhoto } from "../middleware/multer.js";
 import {
-  createUser,
-  getUsers,
-  getUserById,
+  createDirector,
+  createHOD,
+  getDirectors,
+  getHODs,
+  getDepartmentStudents,
+  getStudentPassword,
+  deleteStudent,
   updateUser,
-  deleteUser,
-  setPassword,
-  getStudentPasswords,
-  getDepartmentStats,
-  getUniversityStats
+  deleteUser
 } from "../controllers/userController.js";
 
 const router = Router();
 
-// User management routes
-router.post("/", requireAuth, allowRoles("super_admin", "director_admin", "hod"), createUser);
-router.get("/", requireAuth, allowRoles("super_admin", "director_admin", "hod"), getUsers);
-router.get("/:id", requireAuth, allowRoles("super_admin", "director_admin", "hod"), getUserById);
-router.put("/:id", requireAuth, allowRoles("super_admin", "director_admin", "hod"), updateUser);
-router.delete("/:id", requireAuth, allowRoles("super_admin", "director_admin", "hod"), deleteUser);
+// Super Admin: Create Directors & HODs
+// IMPORTANT: Multer must come AFTER auth middleware but BEFORE controller
+router.post(
+  "/directors", 
+  requireAuth, 
+  allowRoles("super_admin"), 
+  uploadProfilePhoto.single('profilePhoto'), 
+  createDirector
+);
 
-// Password management
-router.post("/set-password", requireAuth, allowRoles("super_admin", "director_admin", "hod"), setPassword);
-router.put("/:id/password", requireAuth, allowRoles("super_admin", "director_admin", "hod"), setPassword);
+router.post(
+  "/hods", 
+  requireAuth, 
+  allowRoles("super_admin"), 
+  uploadProfilePhoto.single('profilePhoto'), 
+  createHOD
+);
 
-// Student password access (for directors)
-router.get("/student-passwords", requireAuth, allowRoles("hod", "director_admin"), getStudentPasswords);
+router.get("/directors", requireAuth, allowRoles("super_admin"), getDirectors);
+router.get("/hods", requireAuth, allowRoles("super_admin"), getHODs);
 
-// Statistics
-router.get("/department-stats", requireAuth, allowRoles("hod", "director_admin", "super_admin"), getDepartmentStats);
-router.get("/university-stats", requireAuth, allowRoles("director_admin", "super_admin"), getUniversityStats);
+// HOD: Department students
+router.get("/department-students", requireAuth, allowRoles("hod"), getDepartmentStudents);
+router.get("/student/:id/password", requireAuth, allowRoles("hod"), getStudentPassword);
+router.delete("/student/:id", requireAuth, allowRoles("hod"), deleteStudent);
+
+// Update/Delete users
+router.put("/:id", requireAuth, allowRoles("super_admin"), updateUser);
+router.delete("/:id", requireAuth, allowRoles("super_admin"), deleteUser);
 
 export default router;
