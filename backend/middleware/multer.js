@@ -1,10 +1,19 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 // Configure storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    const dir = 'uploads/';
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    } catch (e) {
+      // Fallback: if cannot create, still attempt
+    }
+    cb(null, dir);
   },
   filename: function (req, file, cb) {
     // Generate unique filename
@@ -59,7 +68,7 @@ export const uploadProfilePhoto = multer({
   storage: storage,
   fileFilter: profilePhotoFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB limit for profile photos
+    fileSize: 5 * 1024 * 1024 // 5MB limit for profile photos
   }
 });
 

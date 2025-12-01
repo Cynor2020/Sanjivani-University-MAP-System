@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, registerStudent, login, me, logout } from "../controllers/authController.js";
+import { register, registerStudent, login, me, logout, updateMyPassword, updateMyPhoto } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/auth.js";
 import { uploadProfilePhoto } from "../middleware/multer.js";
 
@@ -10,5 +10,7 @@ router.post("/register-student", uploadProfilePhoto.single('profilePhoto'), regi
 router.post("/login", login);
 router.get("/me", requireAuth, me);
 router.post("/logout", requireAuth, logout);
+router.put("/me/password", requireAuth, updateMyPassword);
+router.put("/me/photo", requireAuth, uploadProfilePhoto.single('profilePhoto'), updateMyPhoto);
 
 export default router;

@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import { FolderPlus, Trash2 } from "lucide-react";
+import { FolderPlus, Trash2, Edit } from "lucide-react";
 
 const YEARS = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"];
 
 export default function ManageDepartments() {
   const [showForm, setShowForm] = useState(false);
+  const [editingDept, setEditingDept] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     years: []
@@ -55,6 +56,28 @@ export default function ManageDepartments() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }) => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updates)
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result?.error || "Failed to update department");
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["departments"]);
+      toast.success("Department updated successfully");
+      setShowForm(false);
+      setEditingDept(null);
+      setFormData({ name: "", years: [] });
+    },
+    onError: (error) => toast.error(error.message || "Failed to update department")
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
@@ -86,7 +109,11 @@ export default function ManageDepartments() {
       toast.error("Please select at least one year");
       return;
     }
-    createMutation.mutate(formData);
+    if (!editingDept) {
+      createMutation.mutate(formData);
+    } else {
+      updateMutation.mutate({ id: editingDept._id, updates: formData });
+    }
   };
 
   if (isLoading) {
@@ -109,7 +136,7 @@ export default function ManageDepartments() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add Department</CardTitle>
+            <CardTitle>{editingDept ? "Edit Department" : "Add Department"}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -140,8 +167,8 @@ export default function ManageDepartments() {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Button type="submit">Create Department</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="submit">{editingDept ? "Update Department" : "Create Department"}</Button>
+                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingDept(null); }}>
                   Cancel
                 </Button>
               </div>
@@ -172,6 +199,18 @@ export default function ManageDepartments() {
                     <td className="p-3">{dept.years?.join(", ") || "-"}</td>
                     <td className="p-3">{dept.hod?.name || "-"}</td>
                     <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingDept(dept);
+                          setShowForm(true);
+                          setFormData({ name: dept.name || "", years: dept.years || [] });
+                        }}
+                        className="mr-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"

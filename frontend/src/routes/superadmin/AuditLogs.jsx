@@ -7,13 +7,26 @@ import { Trash2, Shield } from "lucide-react";
 
 export default function AuditLogs() {
   const [page, setPage] = useState(1);
+  const [q, setQ] = useState("");
+  const [action, setAction] = useState("");
+  const [ip, setIp] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [role, setRole] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["auditLogs", page],
+    queryKey: ["auditLogs", page, q, action, ip, role, from, to],
     queryFn: async () => {
+      const params = new URLSearchParams({ page, limit: 50 });
+      if (q) params.set('q', q);
+      if (action) params.set('action', action);
+      if (ip) params.set('ip', ip);
+      if (role) params.set('role', role);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/audit?page=${page}&limit=50`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/audit?${params.toString()}`,
         { credentials: "include" }
       );
       return res.json();
@@ -49,6 +62,78 @@ export default function AuditLogs() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <input
+                type="text"
+                value={q}
+                onChange={(e) => { setQ(e.target.value); setPage(1); }}
+                placeholder="Action/details contains"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
+              <input
+                type="text"
+                value={action}
+                onChange={(e) => { setAction(e.target.value); setPage(1); }}
+                placeholder="Filter by action"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">IP</label>
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => { setIp(e.target.value); setPage(1); }}
+                placeholder="Filter by IP"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+              <select
+                value={role}
+                onChange={(e) => { setRole(e.target.value); setPage(1); }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="director">Director</option>
+                <option value="hod">HOD</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => { setFrom(e.target.value); setPage(1); }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => { setTo(e.target.value); setPage(1); }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Shield className="h-5 w-5" />
             <span>Logs ({data?.pagination?.totalCount || 0})</span>
@@ -61,6 +146,7 @@ export default function AuditLogs() {
                 <tr className="border-b">
                   <th className="text-left p-3">Timestamp</th>
                   <th className="text-left p-3">IP Address</th>
+                  <th className="text-left p-3">Role</th>
                   <th className="text-left p-3">Action</th>
                   <th className="text-left p-3">Actions</th>
                 </tr>
@@ -72,6 +158,7 @@ export default function AuditLogs() {
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
                     <td className="p-3 text-sm">{log.ip || "-"}</td>
+                    <td className="p-3 text-sm">{log.user?.role || "-"}</td>
                     <td className="p-3">{log.action}</td>
                     <td className="p-3">
                       <Button

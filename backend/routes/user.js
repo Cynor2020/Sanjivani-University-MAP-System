@@ -11,7 +11,10 @@ import {
   getStudentPassword,
   deleteStudent,
   updateUser,
-  deleteUser
+  deleteUser,
+  setUserPassword,
+  getUserPasswordStatus,
+  updateUserPhoto
 } from "../controllers/userController.js";
 
 const router = Router();
@@ -45,5 +48,16 @@ router.delete("/student/:id", requireAuth, allowRoles("hod"), deleteStudent);
 // Update/Delete users
 router.put("/:id", requireAuth, allowRoles("super_admin"), updateUser);
 router.delete("/:id", requireAuth, allowRoles("super_admin"), deleteUser);
+
+// Super Admin: Password management
+router.put("/:id/password", requireAuth, allowRoles("super_admin"), setUserPassword);
+router.get("/:id/password-status", requireAuth, allowRoles("super_admin"), getUserPasswordStatus);
+router.put(
+  "/:id/photo",
+  requireAuth,
+  allowRoles("super_admin"),
+  uploadProfilePhoto.single('profilePhoto'),
+  updateUserPhoto
+);
 
 export default router;

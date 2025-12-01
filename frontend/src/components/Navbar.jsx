@@ -83,17 +83,19 @@ export default function Navbar() {
             
             <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
               <div className="hidden lg:flex items-center space-x-3">
-                {user?.profilePhoto ? (
-                  <img 
-                    src={user.profilePhoto} 
-                    alt={user?.name || "User"} 
-                    className="h-9 w-9 rounded-full object-cover shadow-md border-2 border-white"
-                  />
-                ) : (
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
-                )}
+                <button onClick={() => navigate('/profile')} title="Profile">
+                  {user?.profilePhoto ? (
+                    <img 
+                      src={user.profilePhoto} 
+                      alt={user?.name || "User"} 
+                      className="h-9 w-9 rounded-full object-cover shadow-md border-2 border-white"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </button>
                 <div className="text-right hidden xl:block">
                   <p className="text-sm font-semibold text-gray-900 truncate max-w-[150px]">
                     {user?.name || "User"}
@@ -148,17 +150,19 @@ export default function Navbar() {
           
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4 mb-3">
-              {user?.profilePhoto ? (
-                <img 
-                  src={user.profilePhoto} 
-                  alt={user?.name || "User"} 
-                  className="h-10 w-10 rounded-full object-cover shadow-md border-2 border-white"
-                />
-              ) : (
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-              )}
+              <button onClick={() => { navigate('/profile'); setIsMenuOpen(false); }} title="Profile">
+                {user?.profilePhoto ? (
+                  <img 
+                    src={user.profilePhoto} 
+                    alt={user?.name || "User"} 
+                    className="h-10 w-10 rounded-full object-cover shadow-md border-2 border-white"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
               <div className="ml-3 flex-1">
                 <div className="text-base font-semibold text-gray-900">{user?.name || "User"}</div>
                 <div className="text-sm text-gray-500 truncate">{user?.email || ""}</div>

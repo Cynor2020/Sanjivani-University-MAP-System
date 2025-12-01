@@ -4,6 +4,7 @@ import AuditLog from "../models/AuditLog.js";
 import Department from "../models/Department.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
+import mongoose from "mongoose";
 
 const getClientIP = (req) => {
   return req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress || req.ip || 'unknown';
@@ -47,12 +48,13 @@ export const createDirector = async (req, res) => {
             folder: "sanjivani-map/profiles" 
           });
           profilePhoto = uploaded.secure_url;
+          // Clean up temp file only if uploaded to Cloudinary
+          if (req.file.path) {
+            fs.unlinkSync(req.file.path);
+          }
         } else {
-          profilePhoto = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`;
-        }
-        // Clean up temp file
-        if (req.file.path) {
-          fs.unlinkSync(req.file.path);
+          profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+          // Do not delete local file when using local storage
         }
       } catch (uploadError) {
         console.error("Error uploading profile photo:", uploadError);
@@ -149,13 +151,14 @@ export const createHOD = async (req, res) => {
             folder: "sanjivani-map/profiles" 
           });
           profilePhoto = uploaded.secure_url;
+          // Clean up temp file only if uploaded to Cloudinary
+          if (req.file.path) {
+            fs.unlinkSync(req.file.path);
+          }
         } else {
           // Fallback to local storage if Cloudinary is not properly configured
           profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
-        }
-        // Clean up temp file
-        if (req.file.path) {
-          fs.unlinkSync(req.file.path);
+          // Do not delete local file when using local storage
         }
       } catch (uploadError) {
         console.error("Error uploading profile photo:", uploadError);
@@ -224,17 +227,26 @@ export const getDirectors = async (req, res) => {
 // Get HODs
 export const getHODs = async (req, res) => {
   try {
-    const hods = await User.find({ role: "hod", status: { $ne: "deleted" } })
-      .populate('department', 'name')
+    const rawHods = await User.find({ role: "hod", status: { $ne: "deleted" } })
       .select('-passwordHash')
       .sort({ name: 1 })
       .lean();
-      
-    console.log("Fetched HODs:", JSON.stringify(hods, null, 2)); // Debug log
-    
+
+    const hods = [];
+    for (const h of rawHods) {
+      let deptInfo = null;
+      if (h.department && mongoose.Types.ObjectId.isValid(h.department)) {
+        const d = await Department.findById(h.department).select('name').lean();
+        if (d) {
+          deptInfo = { _id: d._id, name: d.name };
+        }
+      }
+      hods.push({ ...h, department: deptInfo });
+    }
+
     res.json({ hods });
   } catch (error) {
-    console.error("Error fetching HODs:", error); // Error log
+    console.error("Error fetching HODs:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -396,6 +408,102 @@ export const deleteUser = async (req, res) => {
     });
 
     res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+// Super Admin: Set user password
+export const setUserPassword = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== "super_admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const { id } = req.params;
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    }
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await user.save();
+    await AuditLog.create({ 
+      ip: getClientIP(req), 
+      action: `Password set by Super Admin: ${user.name}`,
+      userId: req.user._id
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Super Admin: Get password status (no plaintext)
+export const getUserPasswordStatus = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== "super_admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const { id } = req.params;
+    const user = await User.findById(id).select('passwordHash name role');
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ hasPassword: !!user.passwordHash });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Super Admin: Update user profile photo
+export const updateUserPhoto = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== "super_admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    let profilePhoto = user.profilePhoto || "";
+
+    if (req.file) {
+      try {
+        const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+          process.env.CLOUDINARY_API_KEY && 
+          process.env.CLOUDINARY_API_SECRET &&
+          process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloudinary-cloud-name' &&
+          process.env.CLOUDINARY_API_KEY !== 'your-cloudinary-api-key' &&
+          process.env.CLOUDINARY_API_SECRET !== 'your-cloudinary-api-secret';
+
+        if (hasCloudinary) {
+          const uploaded = await cloudinary.uploader.upload(req.file.path, { folder: "sanjivani-map/profiles" });
+          profilePhoto = uploaded.secure_url;
+          if (req.file.path) {
+            fs.unlinkSync(req.file.path);
+          }
+        } else {
+          profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+          // Keep local file
+        }
+      } catch (uploadError) {
+        // Fallback to local if Cloudinary failed
+        profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+        // Do not delete local file
+      }
+    } else {
+      return res.status(400).json({ error: "No photo provided" });
+    }
+
+    user.profilePhoto = profilePhoto;
+    await user.save();
+
+    await AuditLog.create({ 
+      ip: getClientIP(req), 
+      action: `Profile photo updated: ${user.name}`,
+      userId: req.user._id
+    });
+
+    const safeUser = await User.findById(id).select('-passwordHash').lean();
+    res.json({ user: safeUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

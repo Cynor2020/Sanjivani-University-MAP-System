@@ -30,6 +30,7 @@ import ManageDepartments from "./routes/superadmin/ManageDepartments.jsx";
 import StartNewAcademicYear from "./routes/superadmin/StartNewAcademicYear.jsx";
 import AuditLogs from "./routes/superadmin/AuditLogs.jsx";
 import ExcellenceAwardsGenerator from "./routes/superadmin/ExcellenceAwardsGenerator.jsx";
+import Profile from "./routes/Profile.jsx";
 
 export default function App() {
   return (
@@ -70,3 +71,5 @@ export default function App() {
     </Routes>
   );
 }
+          {/* Common Profile Route */}
+          <Route path="/profile" element={<Profile />} />

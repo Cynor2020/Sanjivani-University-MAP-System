@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import { UserPlus, Trash2 } from "lucide-react";
+import { UserPlus, Trash2, Pencil } from "lucide-react";
 
 export default function ManageHODs() {
   const [showForm, setShowForm] = useState(false);
+  const [editingHod, setEditingHod] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -19,6 +20,7 @@ export default function ManageHODs() {
   });
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [hasPassword, setHasPassword] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: departments } = useQuery({
@@ -34,15 +36,18 @@ export default function ManageHODs() {
   // Filter only active departments
   const activeDepartments = departments?.departments?.filter(dept => dept.isActive !== false) || [];
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["hods"],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/hods`, {
         credentials: "include"
       });
       const result = await res.json();
-      console.log("HODs API Response:", result); // Debug log
-      console.log("HODs count:", result?.hods?.length || 0); // Debug log
+      if (!res.ok) {
+        const msg = result?.error || "Failed to load HODs";
+        toast.error(msg);
+        throw new Error(msg);
+      }
       return result;
     }
   });
@@ -74,11 +79,61 @@ export default function ManageHODs() {
       queryClient.invalidateQueries(["hods"]);
       toast.success("HOD created successfully");
       setShowForm(false);
+      setEditingHod(null);
       setFormData({ name: "", email: "", password: "", mobile: "", whatsapp: "", address: "", designation: "", department: "" });
       setProfilePhoto(null);
       setPreviewUrl("");
     },
     onError: (error) => toast.error(error.message || "Failed to create HOD")
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates, newPassword }) => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updates)
+      });
+      const ct1 = res.headers.get("content-type") || "";
+      const result = ct1.includes("application/json") ? await res.json() : { error: await res.text() };
+      if (!res.ok) {
+        throw new Error(result?.error || "Failed to update HOD");
+      }
+      if (newPassword && newPassword.length >= 6) {
+        const pres = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}/password`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ password: newPassword })
+        });
+        const ct2 = pres.headers.get("content-type") || "";
+        const pjson = ct2.includes("application/json") ? await pres.json() : { error: await pres.text() };
+        if (!pres.ok) throw new Error(pjson?.error || "Failed to set password");
+      }
+      if (profilePhoto) {
+        const fd = new FormData();
+        fd.append('profilePhoto', profilePhoto);
+        const upres = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}/photo`, {
+          method: "PUT",
+          credentials: "include",
+          body: fd
+        });
+        const ct3 = upres.headers.get("content-type") || "";
+        const upjson = ct3.includes("application/json") ? await upres.json() : { error: await upres.text() };
+        if (!upres.ok) throw new Error(upjson?.error || "Failed to update photo");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["hods"]);
+      toast.success("HOD updated successfully");
+      setShowForm(false);
+      setEditingHod(null);
+      setFormData({ name: "", email: "", password: "", mobile: "", whatsapp: "", address: "", designation: "", department: "" });
+      setHasPassword(null);
+    },
+    onError: (error) => toast.error(error.message || "Failed to update HOD")
   });
 
   const deleteMutation = useMutation({
@@ -112,15 +167,57 @@ export default function ManageHODs() {
       toast.error("Please select a department");
       return;
     }
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
-      return;
+    if (!editingHod) {
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters long");
+        return;
+      }
+      createMutation.mutate(formData);
+    } else {
+      const updates = {
+        name: formData.name,
+        mobile: formData.mobile,
+        whatsapp: formData.whatsapp,
+        address: formData.address,
+        designation: formData.designation,
+        department: formData.department
+      };
+      const newPassword = formData.password || "";
+      updateMutation.mutate({ id: editingHod._id, updates, newPassword });
     }
-    createMutation.mutate(formData);
+  };
+
+  const handleEdit = (hod) => {
+    setEditingHod(hod);
+    setShowForm(true);
+    setPreviewUrl("");
+    setProfilePhoto(null);
+    setFormData({
+      name: hod.name || "",
+      email: hod.email || "",
+      password: "",
+      mobile: hod.mobile || "",
+      whatsapp: hod.whatsapp || "",
+      address: hod.address || "",
+      designation: hod.designation || "",
+      department: hod.department?._id || hod.department || ""
+    });
+    // Fetch password status
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${hod._id}/password-status`, { credentials: "include" })
+      .then(async (res) => {
+        const ct = res.headers.get("content-type") || "";
+        const json = ct.includes("application/json") ? await res.json() : {};
+        if (res.ok) setHasPassword(!!json.hasPassword);
+        else setHasPassword(null);
+      })
+      .catch(() => setHasPassword(null));
   };
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
+  }
+  if (error) {
+    return <div className="p-6 text-red-500">Error loading HODs</div>;
   }
 
   return (
@@ -139,7 +236,7 @@ export default function ManageHODs() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add HOD</CardTitle>
+            <CardTitle>{editingHod ? "Edit HOD" : "Add HOD"}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -162,20 +259,23 @@ export default function ManageHODs() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={!!editingHod}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter password (min 6 characters)"
-                    minLength={6}
-                  />
-                </div>
+                {!editingHod && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                    <input
+                      type="password"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter password (min 6 characters)"
+                      minLength={6}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
                   <select
@@ -217,6 +317,21 @@ export default function ManageHODs() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{editingHod ? "New Password (optional)" : "Password *"}</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder={editingHod ? "Enter new password (min 6)" : "Enter password (min 6 characters)"}
+                    minLength={editingHod ? 0 : 6}
+                    required={!editingHod}
+                  />
+                  {editingHod && hasPassword !== null && (
+                    <p className="text-xs text-gray-500 mt-1">Current: {hasPassword ? "Password set" : "No password set"}</p>
+                  )}
+                </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
                   <input
@@ -233,8 +348,8 @@ export default function ManageHODs() {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Button type="submit">Create HOD</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="submit">{editingHod ? "Update HOD" : "Create HOD"}</Button>
+                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingHod(null); setHasPassword(null); }}>
                   Cancel
                 </Button>
               </div>
@@ -275,6 +390,14 @@ export default function ManageHODs() {
                     <td className="p-3">{hod.email}</td>
                     <td className="p-3">{hod.department?.name || "-"}</td>
                     <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(hod)}
+                        className="mr-2"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"

@@ -127,9 +127,15 @@ export default function Sidebar() {
           
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md flex-shrink-0">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
+              <button onClick={() => navigate('/profile')} title="Profile" className="flex-shrink-0">
+                {user?.profilePhoto ? (
+                  <img src={user.profilePhoto} alt={user?.name || 'User'} className="h-10 w-10 rounded-full object-cover shadow-md border-2 border-white" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
                   {user?.name || 'User'}

@@ -337,3 +337,72 @@ export const logout = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const updateMyPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Both current and new password required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash || "");
+    if (!ok) return res.status(400).json({ error: "Current password is incorrect" });
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    await AuditLog.create({ 
+      userId: req.user._id,
+      ip: req.ip,
+      action: "update_password",
+      details: `User updated own password: ${user.email}`
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateMyPhoto = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No photo provided" });
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    let profilePhoto = user.profilePhoto || "";
+    try {
+      const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+        process.env.CLOUDINARY_API_KEY && 
+        process.env.CLOUDINARY_API_SECRET &&
+        process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloudinary-cloud-name' &&
+        process.env.CLOUDINARY_API_KEY !== 'your-cloudinary-api-key' &&
+        process.env.CLOUDINARY_API_SECRET !== 'your-cloudinary-api-secret';
+      if (hasCloudinary) {
+        const uploaded = await cloudinary.uploader.upload(req.file.path, { folder: "sanjivani-map/profiles" });
+        profilePhoto = uploaded.secure_url;
+        if (req.file.path) {
+          fs.unlinkSync(req.file.path);
+        }
+      } else {
+        profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+      }
+    } catch (e) {
+      profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+    }
+
+    user.profilePhoto = profilePhoto;
+    await user.save();
+    await AuditLog.create({ 
+      userId: req.user._id,
+      ip: req.ip,
+      action: "update_profile_photo",
+      details: `User updated own photo: ${user.email}`
+    });
+    const safeUser = await User.findById(req.user._id).select('-passwordHash').lean();
+    res.json({ user: safeUser });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
