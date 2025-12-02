@@ -95,8 +95,11 @@ export const uploadCertificate = async (req, res) => {
       cloudinaryUrl = `http://localhost:${process.env.PORT || 5000}/uploads/${req.file.filename}`;
     }
     
+    // Clean up only if uploaded to Cloudinary; keep local files served from /uploads
     try {
-      fs.unlinkSync(req.file.path);
+      if (cloudinaryUrl && !cloudinaryPublicId.startsWith('local_')) {
+        fs.unlinkSync(req.file.path);
+      }
     } catch (cleanupError) {
       console.error("Error cleaning up temporary file:", cleanupError);
     }

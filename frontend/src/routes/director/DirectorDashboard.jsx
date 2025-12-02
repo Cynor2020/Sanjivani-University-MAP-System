@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Eye,
   Shield,
+  CheckCircle,
 } from "lucide-react";
 
 export default function DirectorDashboard() {
@@ -262,7 +263,74 @@ export default function DirectorDashboard() {
           </CardContent>
         </Card>
 
-        {/* Right: Latest activity */}
+        {/* Right: Quick Actions */}
+        <Card className="border border-gray-100 shadow-sm bg-white">
+          <CardHeader className="pb-3 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+              <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div
+              onClick={() => navigate("/director/pending-certificates")}
+              className="group cursor-pointer rounded-xl border border-amber-100 bg-amber-50/50 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="p-2 rounded-xl bg-amber-100">
+                  <FileText className="h-5 w-5 text-amber-600" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <p className="font-semibold text-gray-900 text-sm md:text-base">
+                Review Pending Certificates
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Approve or reject student certificate submissions
+              </p>
+            </div>
+            
+            <div
+              onClick={() => navigate("/director/approved-certificates")}
+              className="group cursor-pointer rounded-xl border border-green-100 bg-green-50/50 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="p-2 rounded-xl bg-green-100">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-green-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <p className="font-semibold text-gray-900 text-sm md:text-base">
+                Approved Certificates
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                View and manage approved certificates
+              </p>
+            </div>
+            
+            <div
+              onClick={() => navigate("/director/manage-students")}
+              className="group cursor-pointer rounded-xl border border-blue-100 bg-blue-50/50 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="p-2 rounded-xl bg-blue-100">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <p className="font-semibold text-gray-900 text-sm md:text-base">
+                Manage Students
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                View and manage student accounts university-wide
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Latest Activity Section */}
+      <div className="grid grid-cols-1 gap-4 md:gap-6">
         <Card className="border border-gray-100 shadow-sm bg-white">
           <CardHeader className="pb-3 md:pb-4">
             <CardTitle className="flex items-center gap-2 text-sm md:text-base">
