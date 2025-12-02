@@ -12,7 +12,8 @@ export default function ManageDepartments() {
   const [editingDept, setEditingDept] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    years: []
+    years: [],
+    yearRequirements: {}
   });
   const queryClient = useQueryClient();
 
@@ -48,7 +49,7 @@ export default function ManageDepartments() {
       queryClient.invalidateQueries(["departments"]);
       toast.success("Department created successfully");
       setShowForm(false);
-      setFormData({ name: "", years: [] });
+      setFormData({ name: "", years: [], yearRequirements: {} });
     },
     onError: (error) => {
       console.error("Create department error:", error);
@@ -73,7 +74,7 @@ export default function ManageDepartments() {
       toast.success("Department updated successfully");
       setShowForm(false);
       setEditingDept(null);
-      setFormData({ name: "", years: [] });
+      setFormData({ name: "", years: [], yearRequirements: {} });
     },
     onError: (error) => toast.error(error.message || "Failed to update department")
   });
@@ -103,6 +104,19 @@ export default function ManageDepartments() {
     }));
   };
 
+  const handleYearRequirementChange = (year, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      yearRequirements: {
+        ...prev.yearRequirements,
+        [year]: {
+          ...prev.yearRequirements[year],
+          [field]: value
+        }
+      }
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.years.length === 0) {
@@ -116,6 +130,16 @@ export default function ManageDepartments() {
     }
   };
 
+  const handleEdit = (dept) => {
+    setEditingDept(dept);
+    setFormData({
+      name: dept.name,
+      years: dept.years || [],
+      yearRequirements: dept.yearRequirements || {}
+    });
+    setShowForm(true);
+  };
+
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -127,7 +151,7 @@ export default function ManageDepartments() {
           <h1 className="text-3xl font-bold text-gray-900">Manage Departments</h1>
           <p className="text-gray-600 mt-2">Create and manage departments</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={() => { setShowForm(!showForm); setEditingDept(null); setFormData({ name: "", years: [], yearRequirements: {} }); }}>
           <FolderPlus className="h-4 w-4 mr-2" />
           Add Department
         </Button>
@@ -166,9 +190,36 @@ export default function ManageDepartments() {
                   ))}
                 </div>
               </div>
+              
+              {/* Year Requirements Section */}
+              {formData.years.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Year Requirements</label>
+                  <div className="space-y-3">
+                    {formData.years.map(year => (
+                      <div key={year} className="p-3 border rounded-lg bg-gray-50">
+                        <h4 className="font-medium text-gray-800 mb-2">Year {year}</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">Points</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.yearRequirements[year]?.points || 100}
+                              onChange={(e) => handleYearRequirementChange(year, 'points', parseInt(e.target.value) || 0)}
+                              className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div className="flex space-x-2">
                 <Button type="submit">{editingDept ? "Update Department" : "Create Department"}</Button>
-                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingDept(null); }}>
+                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingDept(null); setFormData({ name: "", years: [], yearRequirements: {} }); }}>
                   Cancel
                 </Button>
               </div>
@@ -199,29 +250,22 @@ export default function ManageDepartments() {
                     <td className="p-3">{dept.years?.join(", ") || "-"}</td>
                     <td className="p-3">{dept.hod?.name || "-"}</td>
                     <td className="p-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingDept(dept);
-                          setShowForm(true);
-                          setFormData({ name: dept.name || "", years: dept.years || [] });
-                        }}
-                        className="mr-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          if (window.confirm(`Delete ${dept.name}?`)) {
-                            deleteMutation.mutate(dept._id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(dept)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={() => {
+                            if (window.confirm(`Delete department ${dept.name}?`)) {
+                              deleteMutation.mutate(dept._id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

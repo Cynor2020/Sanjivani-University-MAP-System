@@ -44,7 +44,7 @@ export const startNewAcademicYear = async (req, res) => {
     // Auto-promote students
     const students = await User.find({ 
       role: "student", 
-      status: { $in: ["active", "pending_clearance"] } 
+      status: { $in: ["active", "pending_clearance"] }
     }).populate('department');
     
     let promoted = 0;
@@ -61,7 +61,7 @@ export const startNewAcademicYear = async (req, res) => {
       if (nextYear && dept.years.includes(nextYear)) {
         // Promote to next year
         student.currentYear = nextYear;
-        student.academicYear = year;
+        student.academicYear = year; // Update the current academic year
         promoted++;
       } else {
         // Graduate (reached final year)

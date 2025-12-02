@@ -29,18 +29,14 @@ export default function HODDashboard() {
   const { data: statsData, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ["departmentStats"],
     queryFn: async () => {
-      if (!user?.department) return {};
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/department-stats?department=${encodeURIComponent(
-          user.department,
-        )}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/reports/department`,
         {
           credentials: "include",
         },
       );
       return res.json();
     },
-    enabled: !!user?.department,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
@@ -116,37 +112,29 @@ export default function HODDashboard() {
   // Ensure we always have stats to display
   const effectiveStats = departmentStats || statsData?.stats || statsData || null;
   
+  // Calculate derived stats for display
+  const calculatedStats = {
+    totalStudents: effectiveStats?.totalStudents || 0,
+    totalCertificates: (effectiveStats?.certificates?.approved || 0) + (effectiveStats?.certificates?.pending || 0) + (effectiveStats?.certificates?.rejected || 0),
+    pendingClearanceCount: effectiveStats?.certificates?.pending || 0,
+    avgPoints: effectiveStats?.avgPoints || 0
+  };
+  
   // Keep previous stats when loading to prevent flickering
   const [previousStats, setPreviousStats] = useState(null);
   
   useEffect(() => {
-    if (effectiveStats && Object.keys(effectiveStats).length > 0) {
-      setPreviousStats(effectiveStats);
+    if (calculatedStats && Object.keys(calculatedStats).length > 0) {
+      setPreviousStats(calculatedStats);
     }
-  }, [effectiveStats]);
+  }, [calculatedStats]);
   
   // Use previous stats when currently loading to prevent UI flickering
-  const displayStats = statsLoading && !effectiveStats && previousStats ? previousStats : effectiveStats;
+  const displayStats = statsLoading && !calculatedStats && previousStats ? previousStats : calculatedStats;
 
   const yearWise = effectiveStats?.yearWise || [];
 
-  const topStripStats = (() => {
-    const totalStudents = effectiveStats?.totalStudents || 0;
-    const totalCertificates = effectiveStats?.totalCertificates || 0;
-    const pendingClearance = effectiveStats?.pendingClearanceCount || 0;
-    const approvedCertificates = Math.max(totalCertificates - pendingClearance, 0);
-    const alumniCount = departmentStats?.alumniCount || 0;
-    const pendingNow = pendingCertificates.length || 0;
 
-    return {
-      totalStudents,
-      totalCertificates,
-      pendingClearance,
-      approvedCertificates,
-      alumniCount,
-      pendingNow,
-    };
-  })();
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -165,59 +153,7 @@ export default function HODDashboard() {
       
       </div>
 
-      {/* Compact stats strip at top (quick counts) */}
-      {(displayStats || previousStats) && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
-          <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-blue-600 font-medium uppercase tracking-wide">
-              Total Students
-            </p>
-            <p className="text-sm md:text-base font-semibold text-blue-900">
-              {topStripStats.totalStudents}
-            </p>
-          </div>
-          <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-emerald-600 font-medium uppercase tracking-wide">
-              Total Certificates
-            </p>
-            <p className="text-sm md:text-base font-semibold text-emerald-900">
-              {topStripStats.totalCertificates}
-            </p>
-          </div>
-          <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-amber-700 font-medium uppercase tracking-wide">
-              Pending Certificates
-            </p>
-            <p className="text-sm md:text-base font-semibold text-amber-900">
-              {topStripStats.pendingNow}
-            </p>
-          </div>
-          <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-green-700 font-medium uppercase tracking-wide">
-              Approved (Est.)
-            </p>
-            <p className="text-sm md:text-base font-semibold text-green-900">
-              {topStripStats.approvedCertificates}
-            </p>
-          </div>
-          <div className="rounded-lg bg-purple-50 border border-purple-100 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-purple-700 font-medium uppercase tracking-wide">
-              Alumni
-            </p>
-            <p className="text-sm md:text-base font-semibold text-purple-900">
-              {topStripStats.alumniCount}
-            </p>
-          </div>
-          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
-            <p className="text-[10px] md:text-xs text-gray-600 font-medium uppercase tracking-wide">
-              Avg Points
-            </p>
-            <p className="text-sm md:text-base font-semibold text-gray-900">
-              {Math.round((displayStats || previousStats)?.avgPoints || 0)}
-            </p>
-          </div>
-        </div>
-      )}
+
 
       {/* Upload Status Banner */}
       {deadlineStatus && (

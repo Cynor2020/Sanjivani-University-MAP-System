@@ -37,10 +37,10 @@ export const createCategory = async (req, res) => {
       return res.status(403).json({ error: "Forbidden - Only Super Admin can create categories" });
     }
     
-    const { name, description, points } = req.body;
+    const { name, description, levels } = req.body;
     
-    if (!name || points === undefined) {
-      return res.status(400).json({ error: "Name and points are required" });
+    if (!name) {
+      return res.status(400).json({ error: "Name is required" });
     }
     
     // Check if category already exists
@@ -49,10 +49,23 @@ export const createCategory = async (req, res) => {
       return res.status(400).json({ error: "Category with this name already exists" });
     }
     
+    // Process levels array
+    const processedLevels = [];
+    if (levels && Array.isArray(levels)) {
+      levels.forEach(level => {
+        if (level.name) {
+          processedLevels.push({
+            name: level.name,
+            points: parseInt(level.points) || 0
+          });
+        }
+      });
+    }
+    
     const category = await ActivityCategory.create({
       name,
       description,
-      points: parseInt(points),
+      levels: processedLevels,
       isActive: true
     });
     
@@ -100,7 +113,7 @@ export const updateCategory = async (req, res) => {
     }
     
     const { id } = req.params;
-    const { name, description, points, isActive } = req.body;
+    const { name, description, levels, isActive } = req.body;
     
     const category = await ActivityCategory.findById(id);
     if (!category) {
@@ -117,8 +130,23 @@ export const updateCategory = async (req, res) => {
     
     if (name !== undefined) category.name = name;
     if (description !== undefined) category.description = description;
-    if (points !== undefined) category.points = parseInt(points);
     if (isActive !== undefined) category.isActive = isActive;
+    
+    // Process levels array
+    if (levels !== undefined) {
+      const processedLevels = [];
+      if (Array.isArray(levels)) {
+        levels.forEach(level => {
+          if (level.name) {
+            processedLevels.push({
+              name: level.name,
+              points: parseInt(level.points) || 0
+            });
+          }
+        });
+      }
+      category.levels = processedLevels;
+    }
     
     await category.save();
     

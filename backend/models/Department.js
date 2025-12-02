@@ -8,6 +8,13 @@ const DepartmentSchema = new mongoose.Schema(
       enum: ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"],
       required: true
     }],
+    // Simplified year requirements - only max points per year
+    yearRequirements: {
+      type: Map,
+      of: {
+        points: { type: Number, default: 100 } // Renamed from maxPoints to points
+      }
+    },
     hod: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User",

@@ -17,6 +17,7 @@ export default function StudentDashboard() {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [user, setUser] = useState(null);
   const [studentStats, setStudentStats] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
 
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery({
@@ -86,6 +87,38 @@ export default function StudentDashboard() {
       setStudentStats(studentStatsData.stats);
     }
   }, [studentStatsData]);
+
+  // Timer effect for deadline countdown
+  useEffect(() => {
+    let timer;
+    if (uploadStatus?.deadline && !uploadStatus.isActive) {
+      const calculateTimeLeft = () => {
+        const deadline = new Date(uploadStatus.deadline);
+        const now = new Date();
+        const difference = deadline.getTime() - now.getTime();
+        
+        if (difference > 0) {
+          const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+          
+          return { days, hours, minutes, seconds };
+        }
+        return null;
+      };
+      
+      setTimeLeft(calculateTimeLeft());
+      
+      timer = setInterval(() => {
+        setTimeLeft(calculateTimeLeft());
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [uploadStatus]);
 
   if (userLoading || progressLoading) {
     return <LoadingSkeleton />;
@@ -226,8 +259,8 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Upload Status Banner */}
-      {uploadStatus && (
+      {/* Upload Status Banner - Only show when upload is active or has a deadline */}
+      {uploadStatus && (uploadStatus.isActive || uploadStatus.deadline) && (
         <Card className={`border-2 shadow-lg ${
           uploadStatus.isActive 
             ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300" 
@@ -245,10 +278,26 @@ export default function StudentDashboard() {
                   <h3 className="font-bold text-lg">
                     Certificate Upload: {uploadStatus.isActive ? "Active" : "Disabled"}
                   </h3>
-                  {!uploadStatus.isActive && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      Certificate upload is currently disabled by HOD. {uploadStatus.deadline && `Deadline overdue: ${new Date(uploadStatus.deadline).toLocaleString()}`}
-                    </p>
+                  {!uploadStatus.isActive && uploadStatus.deadline && timeLeft && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600">
+                        Hurry up! Deadline approaching:
+                      </p>
+                      <div className="flex space-x-2 mt-1">
+                        <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                          {timeLeft.days}d
+                        </div>
+                        <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                          {timeLeft.hours}h
+                        </div>
+                        <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                          {timeLeft.minutes}m
+                        </div>
+                        <div className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                          {timeLeft.seconds}s
+                        </div>
+                      </div>
+                    </div>
                   )}
                   {uploadStatus.isActive && uploadStatus.deadline && (
                     <p className="text-sm text-gray-600 mt-1">
@@ -324,7 +373,7 @@ export default function StudentDashboard() {
                 <div key={index} className="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-lg transition-shadow">
                   <h3 className="font-bold text-center mb-3 text-gray-900 text-lg">Year {yearData.year}</h3>
                   <div className="text-center text-3xl font-bold mb-3 text-gray-900">
-                    {yearData.points || 0} / {yearData.minRequired || 50}
+                    {yearData.points || 0} / {yearData.requiredPoints || 100}
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
                     <div

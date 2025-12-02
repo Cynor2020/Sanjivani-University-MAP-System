@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Department from "../models/Department.js";
 import AuditLog from "../models/AuditLog.js";
+import AcademicYear from "../models/AcademicYear.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 
@@ -226,6 +227,9 @@ export const registerStudent = async (req, res) => {
       return res.status(400).json({ error: "Invalid year for selected department" });
     }
 
+    // Get current academic year
+    const currentAcademicYear = await AcademicYear.findOne({ isActive: true });
+
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -253,7 +257,7 @@ export const registerStudent = async (req, res) => {
       }
     }
 
-    // Create student
+    // Create student with join year and academic year tracking
     const user = await User.create({
       email: email.toLowerCase(),
       name,
@@ -261,6 +265,9 @@ export const registerStudent = async (req, res) => {
       prn,
       department,
       currentYear: year,
+      joinYear: year, // Track the year when student first joined
+      joinAcademicYear: currentAcademicYear ? currentAcademicYear.current : null, // Track the academic year when student joined
+      academicYear: currentAcademicYear ? currentAcademicYear.current : null, // Set current academic year
       mobile,
       profilePhoto,
       passwordHash,
@@ -310,6 +317,8 @@ export const me = async (req, res) => {
         email: user.email,
         department: user.department,
         currentYear: user.currentYear,
+        joinYear: user.joinYear,
+        joinAcademicYear: user.joinAcademicYear,
         prn: user.prn,
         mobile: user.mobile,
         whatsapp: user.whatsapp,

@@ -5,7 +5,7 @@ import { listAuditLogs, deleteAuditLog } from "../controllers/auditController.js
 
 const router = Router();
 
-router.get("/", requireAuth, allowRoles("super_admin"), listAuditLogs);
+router.get("/", requireAuth, allowRoles("super_admin", "director"), listAuditLogs);
 router.delete("/:id", requireAuth, allowRoles("super_admin"), deleteAuditLog);
 
 export default router;

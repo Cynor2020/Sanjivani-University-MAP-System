@@ -364,11 +364,25 @@ export const departmentReport = async (req, res) => {
       formattedStats[stat._id] = stat.count;
     });
 
+    // Calculate average points per student
+    const avgPointsResult = await User.aggregate([
+      { $match: studentFilter },
+      {
+        $group: {
+          _id: null,
+          avg: { $avg: "$totalPoints" }
+        }
+      }
+    ]);
+    
+    const avgPoints = avgPointsResult[0]?.avg ? Math.round(avgPointsResult[0].avg) : 0;
+
     res.json({
       students: studentsWithCertificates,
       stats: {
         totalStudents: studentsWithCertificates.length,
-        certificates: formattedStats
+        certificates: formattedStats,
+        avgPoints: avgPoints
       }
     });
   } catch (error) {

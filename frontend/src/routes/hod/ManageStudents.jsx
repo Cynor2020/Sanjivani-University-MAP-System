@@ -1,15 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import { Search, Eye, Trash2, Users } from "lucide-react";
+import { Search, Key, Trash2, Users } from "lucide-react";
 
 export default function ManageStudents() {
   const [search, setSearch] = useState("");
   const [year, setYear] = useState("");
   const [status, setStatus] = useState("");
   const [departmentYears, setDepartmentYears] = useState([]);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch department years for HOD
@@ -23,12 +26,7 @@ export default function ManageStudents() {
     }
   });
 
-  useEffect(() => {
-    if (departmentYearsData?.department?.years) {
-      setDepartmentYears(departmentYearsData.department.years);
-    }
-  }, [departmentYearsData]);
-
+  // Fetch students
   const { data, isLoading } = useQuery({
     queryKey: ["departmentStudents", search, year, status],
     queryFn: async () => {
@@ -45,6 +43,7 @@ export default function ManageStudents() {
     },
   });
 
+  // Delete student mutation
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/student/${id}`, {
@@ -63,6 +62,7 @@ export default function ManageStudents() {
     },
   });
 
+  // Status update mutation
   const statusMutation = useMutation({
     mutationFn: async ({ id, nextStatus }) => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${id}`, {
@@ -83,27 +83,44 @@ export default function ManageStudents() {
     },
   });
 
-  const viewPassword = async (id) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/student/${id}/password`,
-        {
-          credentials: "include",
-        },
-      );
-      const resp = await res.json();
-      if (res.ok) {
-        if (resp.hasPassword || resp.student?.hasPassword) {
-          toast.info("Password is set. Plain text password cannot be viewed for security.");
-        } else {
-          toast.info("Password not set yet for this student.");
-        }
-      } else {
-        toast.error(resp.error || "Failed to fetch password info");
+  // Password update mutation
+  const passwordMutation = useMutation({
+    mutationFn: async ({ id, password }) => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/student/${id}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update password");
       }
-    } catch (error) {
-      toast.error("Failed to fetch password info");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["departmentStudents"]);
+      toast.success("Password updated successfully");
+      setShowPasswordModal(false);
+      setNewPassword("");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const openPasswordModal = (studentId) => {
+    setSelectedStudentId(studentId);
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
     }
+    passwordMutation.mutate({ id: selectedStudentId, password: newPassword });
   };
 
   if (isLoading) {
@@ -116,6 +133,63 @@ export default function ManageStudents() {
         <h1 className="text-3xl font-bold text-gray-900">Manage Students</h1>
         <p className="text-gray-600 mt-2">View and manage department students</p>
       </div>
+
+      {/* Password Update Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Update Password</h2>
+                <button
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setNewPassword("");
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+              <form onSubmit={handlePasswordSubmit}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter new password"
+                    minLength="6"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setNewPassword("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={passwordMutation.isLoading}
+                  >
+                    {passwordMutation.isLoading ? "Updating..." : "Update Password"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -224,9 +298,9 @@ export default function ManageStudents() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => viewPassword(student._id)}
+                            onClick={() => openPasswordModal(student._id)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Key className="h-4 w-4 mr-1" />
                             Password
                           </Button>
                           <Button

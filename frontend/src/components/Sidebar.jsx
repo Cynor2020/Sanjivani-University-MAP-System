@@ -14,6 +14,7 @@ import {
   ToggleLeft,
   Shield,
   FileCheck,
+  CheckCircle,
   X,
 } from "lucide-react";
 
@@ -149,6 +150,7 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: "/student", label: "Dashboard", icon: Home },
       { path: "/student/upload", label: "Upload Certificate", icon: Upload },
       { path: "/student/certificates", label: "My Certificates", icon: FileText },
+      { path: "/student/points", label: "My Points", icon: Award },
     ],
     hod: [
       { path: "/hod", label: "Dashboard", icon: Home },
@@ -157,7 +159,14 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: "/hod/students", label: "Manage Students", icon: Users },
       { path: "/hod/analytics", label: "Analytics", icon: BarChart3 },
     ],
-    director: [{ path: "/director", label: "Dashboard", icon: Home }],
+    director: [
+      { path: "/director", label: "Dashboard", icon: Home },
+      { path: "/director/analytics", label: "University Analytics", icon: BarChart3 },
+      { path: "/director/manage-students", label: "Manage Students", icon: Users },
+      { path: "/director/pending-certificates", label: "Pending Certificates", icon: FileText },
+      { path: "/director/approved-certificates", label: "Approved Certificates", icon: CheckCircle },
+      { path: "/director/audit-logs", label: "Audit Logs", icon: Shield }
+    ],
     super_admin: [
       { path: "/superadmin", label: "Dashboard", icon: Home },
       { path: "/superadmin/analytics", label: "Detailed Analytics", icon: BarChart3 },

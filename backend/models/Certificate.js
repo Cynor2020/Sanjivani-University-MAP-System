@@ -7,7 +7,7 @@ const CertificateSchema = new mongoose.Schema(
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "ActivityCategory", required: true },
     categoryName: { type: String, required: true },
     title: { type: String, required: true },
-    level: { type: String, enum: ["college", "state", "national"], required: true },
+    level: { type: String, required: true }, // Remove enum validation to allow custom level names
     pointsAllocated: { type: Number, default: 0 },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String },

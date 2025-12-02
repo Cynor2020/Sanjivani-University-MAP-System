@@ -11,6 +11,7 @@ import ManageCategories from "./routes/superadmin/ManageCategories.jsx";
 import StudentDashboard from "./routes/student/StudentDashboard.jsx";
 import UploadCertificate from "./routes/student/UploadCertificate.jsx";
 import MyCertificates from "./routes/student/MyCertificates.jsx";
+import MyPoints from "./routes/student/MyPoints.jsx";
 
 // HOD Routes
 import HODDashboard from "./routes/hod/HODDashboard.jsx";
@@ -30,6 +31,10 @@ import ManageDepartments from "./routes/superadmin/ManageDepartments.jsx";
 import StartNewAcademicYear from "./routes/superadmin/StartNewAcademicYear.jsx";
 import AuditLogs from "./routes/superadmin/AuditLogs.jsx";
 import UniversityWideReports from "./routes/superadmin/UniversityWideReports.jsx";
+import DirectorManageStudents from "./routes/director/ManageStudents.jsx";
+import DirectorAuditLogs from "./routes/director/AuditLogs.jsx";
+import DirectorPendingCertificates from "./routes/director/PendingCertificates.jsx";
+import DirectorApprovedCertificates from "./routes/director/ApprovedCertificates.jsx";
 import Profile from "./routes/Profile.jsx";
 
 export default function App() {
@@ -48,6 +53,7 @@ export default function App() {
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/upload" element={<UploadCertificate />} />
           <Route path="/student/certificates" element={<MyCertificates />} />
+          <Route path="/student/points" element={<MyPoints />} />
 
           {/* HOD Routes */}
           <Route path="/hod" element={<HODDashboard />} />
@@ -58,6 +64,11 @@ export default function App() {
 
           {/* Director Routes */}
           <Route path="/director" element={<DirectorDashboard />} />
+          <Route path="/director/analytics" element={<UniversityWideReports />} />
+          <Route path="/director/manage-students" element={<DirectorManageStudents />} />
+          <Route path="/director/audit-logs" element={<DirectorAuditLogs />} />
+          <Route path="/director/pending-certificates" element={<DirectorPendingCertificates />} />
+          <Route path="/director/approved-certificates" element={<DirectorApprovedCertificates />} />
 
           {/* Super Admin Routes */}
           <Route path="/superadmin" element={<SuperAdminDashboard />} />

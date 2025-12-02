@@ -28,12 +28,12 @@ router.get("/department/export", requireAuth, allowRoles("hod"), exportDepartmen
 
 
 // Super Admin: Detailed Analytics
-router.get("/detailed-analytics", requireAuth, allowRoles("super_admin"), detailedAnalytics);
+router.get("/detailed-analytics", requireAuth, allowRoles("super_admin", "director"), detailedAnalytics);
 
 // Super Admin: Get latest approved certificates
-router.get("/latest-approved", requireAuth, allowRoles("super_admin"), getLatestApprovedCertificates);
+router.get("/latest-approved", requireAuth, allowRoles("super_admin", "director"), getLatestApprovedCertificates);
 
 // Super Admin: Export Detailed Analytics to CSV
-router.get("/detailed-analytics/export", requireAuth, allowRoles("super_admin"), exportDetailedAnalytics);
+router.get("/detailed-analytics/export", requireAuth, allowRoles("super_admin", "director"), exportDetailedAnalytics);
 
 export default router;

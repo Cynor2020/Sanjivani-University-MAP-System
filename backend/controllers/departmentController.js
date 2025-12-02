@@ -18,26 +18,43 @@ export const createDepartment = async (req, res) => {
       return res.status(403).json({ error: "Forbidden - Only Super Admin can create departments" });
     }
     
-    const { name, years } = req.body;
+    const { name, years, yearRequirements } = req.body;
     
     if (!name || !years || !Array.isArray(years) || years.length === 0) {
       return res.status(400).json({ error: "Name and years are required" });
     }
 
-    const existing = await Department.findOne({ name });
+    const existing = await Department.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
     if (existing) {
-      return res.status(400).json({ error: "Department already exists" });
+      return res.status(400).json({ error: "Department with this name already exists" });
     }
-    
-    const department = await Department.create({ name, years });
-    
-    await AuditLog.create({
-      ip: getClientIP(req),
+
+    // Process year requirements - only keep points field
+    const processedYearRequirements = {};
+    if (yearRequirements && typeof yearRequirements === 'object') {
+      for (const [year, requirements] of Object.entries(yearRequirements)) {
+        if (years.includes(year) && requirements.points !== undefined) {
+          processedYearRequirements[year] = {
+            points: requirements.points
+          };
+        }
+      }
+    }
+
+    const department = await Department.create({
+      name,
+      years,
+      yearRequirements: processedYearRequirements,
+      isActive: true
+    });
+
+    await AuditLog.create({ 
+      ip: getClientIP(req), 
       action: `Department created: ${name}`,
       userId: req.user._id
     });
-    
-    res.json({ department });
+
+    res.status(201).json({ department });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -58,33 +75,57 @@ export const getDepartments = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, years, isActive } = req.body;
-    
+    const { name, years, yearRequirements, isActive } = req.body;
+
     const department = await Department.findById(id);
     if (!department) {
       return res.status(404).json({ error: "Department not found" });
     }
-    
-    if (name && name !== department.name) {
-      const existing = await Department.findOne({ name });
+
+    // Check for duplicate name (excluding current department)
+    if (name) {
+      const existing = await Department.findOne({ 
+        name: { $regex: new RegExp(`^${name}$`, 'i') },
+        _id: { $ne: id }
+      });
       if (existing) {
-        return res.status(400).json({ error: "Department name already exists" });
+        return res.status(400).json({ error: "Department with this name already exists" });
       }
-      department.name = name;
     }
-    
-    if (years) department.years = years;
-    if (isActive !== undefined) department.isActive = isActive;
-    
-    await department.save();
-    
-    await AuditLog.create({
-      ip: getClientIP(req),
-      action: `Department updated: ${department.name}`,
+
+    // Process year requirements - only keep points field
+    const processedYearRequirements = {};
+    if (yearRequirements && typeof yearRequirements === 'object') {
+      for (const [year, requirements] of Object.entries(yearRequirements)) {
+        if (years && years.includes(year) && requirements.points !== undefined) {
+          processedYearRequirements[year] = {
+            points: requirements.points
+          };
+        }
+      }
+    }
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (years) updateData.years = years;
+    if (Object.keys(processedYearRequirements).length > 0) {
+      updateData.yearRequirements = processedYearRequirements;
+    }
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const updatedDepartment = await Department.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    await AuditLog.create({ 
+      ip: getClientIP(req), 
+      action: `Department updated: ${updatedDepartment.name}`,
       userId: req.user._id
     });
-    
-    res.json({ department });
+
+    res.json({ department: updatedDepartment });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

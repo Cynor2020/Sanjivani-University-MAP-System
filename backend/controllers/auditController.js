@@ -27,6 +27,14 @@ export const listAuditLogs = async (req, res) => {
       { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
     ];
 
+    // If user is Director, exclude Super Admin logs
+    if (req.user.role === "director") {
+      pipeline.push({ $match: { $or: [
+        { 'user.role': { $ne: 'super_admin' } },
+        { 'user.role': { $exists: false } }
+      ] } });
+    }
+
     if (role) {
       pipeline.push({ $match: { 'user.role': role } });
     }

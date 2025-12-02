@@ -8,6 +8,7 @@ import {
   getDirectors,
   getHODs,
   getDepartmentStudents,
+  getAllStudents,
   getStudentPassword,
   deleteStudent,
   updateUser,
@@ -44,6 +45,11 @@ router.get("/hods", requireAuth, allowRoles("super_admin"), getHODs);
 router.get("/department-students", requireAuth, allowRoles("hod"), getDepartmentStudents);
 router.get("/student/:id/password", requireAuth, allowRoles("hod"), getStudentPassword);
 router.delete("/student/:id", requireAuth, allowRoles("hod"), deleteStudent);
+router.put("/student/:id", requireAuth, allowRoles("hod"), updateUser);
+router.put("/student/:id/password", requireAuth, allowRoles("hod"), setUserPassword);
+
+// Director: All students
+router.get("/all-students", requireAuth, allowRoles("director"), getAllStudents);
 
 // Update/Delete users
 router.put("/:id", requireAuth, allowRoles("super_admin"), updateUser);

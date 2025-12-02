@@ -4,7 +4,11 @@ const ActivityCategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
-    points: { type: Number, default: 0 },
+    // Remove the single points field and add levels array
+    levels: [{
+      name: { type: String, required: true },
+      points: { type: Number, default: 0 }
+    }],
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }

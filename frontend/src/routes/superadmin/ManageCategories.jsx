@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import toast from "react-hot-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
 
 export default function ManageCategories() {
   const [showForm, setShowForm] = useState(false);
@@ -12,7 +12,7 @@ export default function ManageCategories() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    points: ""
+    levels: [{ name: "", points: "" }] // Initialize with one level
   });
   const queryClient = useQueryClient();
 
@@ -112,7 +112,7 @@ export default function ManageCategories() {
     setFormData({
       name: "",
       description: "",
-      points: ""
+      levels: [{ name: "", points: "" }] // Reset to one empty level
     });
     setIsEditing(false);
     setCurrentCategory(null);
@@ -131,7 +131,9 @@ export default function ManageCategories() {
     setFormData({
       name: category.name,
       description: category.description || "",
-      points: category.points
+      levels: category.levels && category.levels.length > 0 
+        ? category.levels.map(level => ({ name: level.name, points: level.points.toString() }))
+        : [{ name: "", points: "" }]
     });
     setIsEditing(true);
     setCurrentCategory(category);
@@ -142,6 +144,36 @@ export default function ManageCategories() {
     if (window.confirm(`Are you sure you want to delete "${category.name}"?`)) {
       deleteMutation.mutate(category._id);
     }
+  };
+
+  // Add a new level field
+  const addLevel = () => {
+    setFormData({
+      ...formData,
+      levels: [...formData.levels, { name: "", points: "" }]
+    });
+  };
+
+  // Remove a level field
+  const removeLevel = (index) => {
+    if (formData.levels.length > 1) {
+      const newLevels = [...formData.levels];
+      newLevels.splice(index, 1);
+      setFormData({
+        ...formData,
+        levels: newLevels
+      });
+    }
+  };
+
+  // Update a specific level field
+  const updateLevel = (index, field, value) => {
+    const newLevels = [...formData.levels];
+    newLevels[index][field] = value;
+    setFormData({
+      ...formData,
+      levels: newLevels
+    });
   };
 
   if (isLoading) {
@@ -161,7 +193,7 @@ export default function ManageCategories() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Categories</h1>
-          <p className="text-gray-600 mt-2">Create and manage activity categories</p>
+          <p className="text-gray-600 mt-2">Create and manage activity categories with multiple levels</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -177,7 +209,7 @@ export default function ManageCategories() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                   <input
                     type="text"
@@ -186,18 +218,6 @@ export default function ManageCategories() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter category name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Points *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.points}
-                    onChange={(e) => setFormData({ ...formData, points: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter points"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -211,6 +231,58 @@ export default function ManageCategories() {
                   />
                 </div>
               </div>
+
+              {/* Levels Section */}
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Levels *</label>
+                  <Button type="button" variant="outline" size="sm" onClick={addLevel}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Level
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {formData.levels.map((level, index) => (
+                    <div key={index} className="flex gap-3 items-start">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <input
+                            type="text"
+                            required
+                            value={level.name}
+                            onChange={(e) => updateLevel(index, 'name', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="Level name (e.g., College Level)"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={level.points}
+                            onChange={(e) => updateLevel(index, 'points', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="Points"
+                          />
+                        </div>
+                      </div>
+                      {formData.levels.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => removeLevel(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex space-x-2">
                 <Button type="submit">
                   {isEditing ? "Update Category" : "Create Category"}
@@ -238,7 +310,7 @@ export default function ManageCategories() {
                 <tr className="border-b">
                   <th className="text-left p-3">Name</th>
                   <th className="text-left p-3">Description</th>
-                  <th className="text-left p-3">Points</th>
+                  <th className="text-left p-3">Levels</th>
                   <th className="text-left p-3">Status</th>
                   <th className="text-left p-3">Actions</th>
                 </tr>
@@ -248,7 +320,19 @@ export default function ManageCategories() {
                   <tr key={category._id} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-medium">{category.name}</td>
                     <td className="p-3">{category.description || "-"}</td>
-                    <td className="p-3">{category.points}</td>
+                    <td className="p-3">
+                      {category.levels && category.levels.length > 0 ? (
+                        <div className="space-y-1">
+                          {category.levels.map((level, index) => (
+                            <div key={index} className="text-sm">
+                              {level.name}: {level.points} points
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No levels</span>
+                      )}
+                    </td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         category.isActive 

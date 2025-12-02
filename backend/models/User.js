@@ -14,6 +14,8 @@ const UserSchema = new mongoose.Schema(
     department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
     currentYear: { type: String, enum: ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"] },
     academicYear: { type: String }, // Current academic year
+    joinYear: { type: String }, // Year when student first joined (for tracking academic progression)
+    joinAcademicYear: { type: String }, // Academic year when student first joined
     
     // Common fields
     mobile: { type: String },
@@ -23,7 +25,7 @@ const UserSchema = new mongoose.Schema(
     designation: { type: String }, // For directors/HODs
     
     // Status and points
-    status: { type: String, default: "active", enum: ["active", "inactive", "deleted"] },
+    status: { type: String, default: "active", enum: ["active", "inactive", "deleted", "pending_clearance", "alumni"] },
     totalPoints: { type: Number, default: 0 },
     
     // Academic progression
@@ -32,17 +34,16 @@ const UserSchema = new mongoose.Schema(
     year3Points: { type: Number, default: 0 },
     year4Points: { type: Number, default: 0 },
     year5Points: { type: Number, default: 0 },
-    year6Points: { type: Number, default: 0 },
-    
-    lastLoginAt: { type: Date }
+    year6Points: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
 
 // Indexes for performance
-UserSchema.index({ department: 1, currentYear: 1, academicYear: 1, status: 1 });
-UserSchema.index({ role: 1, status: 1 });
-UserSchema.index({ prn: 1 }, { sparse: true });
 UserSchema.index({ email: 1 });
+UserSchema.index({ prn: 1 });
+UserSchema.index({ role: 1 });
+UserSchema.index({ department: 1, role: 1 });
+UserSchema.index({ currentYear: 1 });
 
 export default mongoose.model("User", UserSchema);

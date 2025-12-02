@@ -296,6 +296,57 @@ export const getDepartmentStudents = async (req, res) => {
   }
 };
 
+// Director: Get all students across all departments
+export const getAllStudents = async (req, res) => {
+  try {
+    const { department, year, academicYear, status, search, page = 1, limit = 50 } = req.query;
+    
+    const filter = { 
+      role: "student",
+      status: { $ne: "deleted" }
+    };
+
+    // Directors can see all departments, but HODs are restricted to their own
+    if (req.user.role === "hod") {
+      filter.department = req.user.department;
+    } else if (req.user.role === "director" && department) {
+      filter.department = department;
+    }
+
+    if (year) filter.currentYear = year;
+    if (academicYear) filter.academicYear = academicYear;
+    if (status) filter.status = status;
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { prn: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const total = await User.countDocuments(filter);
+    const students = await User.find(filter)
+      .populate('department', 'name')
+      .select('-passwordHash')
+      .sort({ name: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .lean();
+
+    res.json({ 
+      students,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalCount: total
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // HOD: Get student password (plain text - stored in passwordHash but we'll show it)
 export const getStudentPassword = async (req, res) => {
   try {
@@ -307,8 +358,14 @@ export const getStudentPassword = async (req, res) => {
     }
 
     // Check if HOD's department matches student's department
-    if (req.user.role === "hod" && student.department.toString() !== req.user.department.toString()) {
-      return res.status(403).json({ error: "Forbidden" });
+    if (req.user.role === "hod") {
+      // Handle cases where department might be an ObjectId or string
+      const studentDept = student.department ? student.department.toString() : '';
+      const hodDept = req.user.department ? req.user.department.toString() : '';
+      
+      if (studentDept !== hodDept) {
+        return res.status(403).json({ error: "Forbidden: Student not in your department" });
+      }
     }
 
     // Note: In production, passwords should be hashed. This is for viewing only.
@@ -339,8 +396,14 @@ export const deleteStudent = async (req, res) => {
     }
 
     // Check if HOD's department matches student's department
-    if (req.user.role === "hod" && student.department.toString() !== req.user.department.toString()) {
-      return res.status(403).json({ error: "Forbidden" });
+    if (req.user.role === "hod") {
+      // Handle cases where department might be an ObjectId or string
+      const studentDept = student.department ? student.department.toString() : '';
+      const hodDept = req.user.department ? req.user.department.toString() : '';
+      
+      if (studentDept !== hodDept) {
+        return res.status(403).json({ error: "Forbidden: Student not in your department" });
+      }
     }
 
     // Soft delete
@@ -365,9 +428,34 @@ export const updateUser = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
-    delete updates.passwordHash;
-    delete updates.email;
-    delete updates.role;
+    // Check if user is trying to update themselves
+    if (id === req.user._id.toString()) {
+      return res.status(400).json({ error: "Cannot update yourself" });
+    }
+    
+    // For HODs, check if student belongs to their department
+    if (req.user.role === "hod") {
+      const student = await User.findById(id);
+      if (!student) return res.status(404).json({ error: "User not found" });
+      
+      // Check if student belongs to HOD's department
+      // Handle cases where department might be an ObjectId or string
+      const studentDept = student.department ? student.department.toString() : '';
+      const hodDept = req.user.department ? req.user.department.toString() : '';
+      
+      if (studentDept !== hodDept) {
+        return res.status(403).json({ error: "Forbidden: Student not in your department" });
+      }
+      
+      // HODs are not allowed to update student details, only passwords
+      return res.status(403).json({ error: "Forbidden: HODs can only update passwords" });
+    }
+    
+    // Super Admins can update all fields except passwordHash and role
+    if (req.user.role === "super_admin") {
+      delete updates.passwordHash;
+      delete updates.role;
+    }
 
     const user = await User.findByIdAndUpdate(id, { $set: updates }, { new: true })
       .select('-passwordHash');
@@ -382,6 +470,7 @@ export const updateUser = async (req, res) => {
 
     res.json({ user });
   } catch (error) {
+    console.error("Update user error:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -412,28 +501,48 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// Super Admin: Set user password
+// Super Admin & HOD: Set user password
 export const setUserPassword = async (req, res) => {
   try {
-    if (!req.user || req.user.role !== "super_admin") {
+    // Check if user has proper role
+    if (!req.user || (req.user.role !== "super_admin" && req.user.role !== "hod")) {
       return res.status(403).json({ error: "Forbidden" });
     }
+    
     const { id } = req.params;
     const { password } = req.body;
+    
     if (!password || password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters long" });
     }
+    
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
+    
+    // For HODs, check if student belongs to their department
+    if (req.user.role === "hod") {
+      // Handle cases where department might be an ObjectId or string
+      const studentDept = user.department ? user.department.toString() : '';
+      const hodDept = req.user.department ? req.user.department.toString() : '';
+      
+      if (studentDept !== hodDept) {
+        return res.status(403).json({ error: "Forbidden: Student not in your department" });
+      }
+    }
+    
     user.passwordHash = await bcrypt.hash(password, 10);
     await user.save();
+    
+    const actionText = req.user.role === "super_admin" ? "Super Admin" : "HOD";
     await AuditLog.create({ 
       ip: getClientIP(req), 
-      action: `Password set by Super Admin: ${user.name}`,
+      action: `Password set by ${actionText}: ${user.name}`,
       userId: req.user._id
     });
+    
     res.json({ ok: true });
   } catch (error) {
+    console.error("Set user password error:", error);
     res.status(500).json({ error: error.message });
   }
 };
