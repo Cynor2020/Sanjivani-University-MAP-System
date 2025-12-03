@@ -11,6 +11,7 @@ import uploadLockRoutes from "./routes/uploadLock.js";
 import auditRoutes from "./routes/audit.js";
 import reportRoutes from "./routes/report.js";
 import departmentRoutes from "./routes/department.js";
+import advertisementRoutes from "./routes/advertisement.js";
 import path from "path";
 import { fileURLToPath } from 'url';
 
@@ -67,6 +68,7 @@ app.use("/api/upload-lock", uploadLockRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/departments", departmentRoutes);
+app.use("/api/advertisements", advertisementRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {

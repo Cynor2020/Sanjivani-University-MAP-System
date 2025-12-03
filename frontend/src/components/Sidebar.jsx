@@ -16,6 +16,7 @@ import {
   FileCheck,
   CheckCircle,
   X,
+  Megaphone,
 } from "lucide-react";
 
 const MenuItem = ({ item, isActive, onClick }) => {
@@ -163,6 +164,7 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: "/director", label: "Dashboard", icon: Home },
       { path: "/director/analytics", label: "University Analytics", icon: BarChart3 },
       { path: "/director/manage-students", label: "Manage Students", icon: Users },
+      { path: "/director/manage-ads", label: "Manage Ads", icon: Megaphone },
       { path: "/director/pending-certificates", label: "Pending Certificates", icon: FileText },
       { path: "/director/approved-certificates", label: "Approved Certificates", icon: CheckCircle },
       { path: "/director/audit-logs", label: "Audit Logs", icon: Shield }

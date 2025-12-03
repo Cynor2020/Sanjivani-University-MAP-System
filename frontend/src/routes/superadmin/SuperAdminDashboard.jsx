@@ -77,6 +77,39 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  // Fetch university summary
+  const { data: universitySummaryData } = useQuery({
+    queryKey: ["universitySummary"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/university`, {
+        credentials: "include",
+      });
+      return res.json();
+    },
+  });
+
+  // Fetch top student
+  const { data: topStudentData } = useQuery({
+    queryKey: ["topStudent"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/leaderboard`, {
+        credentials: "include",
+      });
+      return res.json();
+    },
+  });
+
+  // Fetch top department
+  const { data: topDepartmentData } = useQuery({
+    queryKey: ["topDepartment"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/performance-vs-strength`, {
+        credentials: "include",
+      });
+      return res.json();
+    },
+  });
+
   const handleStartNewAcademicYear = async () => {
     if (!academicYear) {
       toast.error("Please enter academic year");
@@ -209,7 +242,7 @@ export default function SuperAdminDashboard() {
 
       {/* Middle section: left analytics style card + right quick actions / lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Left: MAP overview (chart placeholder like Materially) */}
+        {/* Left: MAP overview with real data */}
         <Card className="lg:col-span-2 border border-gray-100 shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3 md:pb-4">
             <div>
@@ -218,24 +251,97 @@ export default function SuperAdminDashboard() {
                 MAP Overview
               </CardTitle>
               <p className="text-[11px] md:text-xs text-gray-500 mt-1">
-                Demo layout for university-wide MAP performance (chart can be plugged here later).
+                University-wide MAP statistics
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="text-[11px] md:text-xs px-2 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-600">
-                This Year
-              </button>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate("/superadmin/analytics")}
+              className="text-[11px] md:text-xs"
+            >
+              View Details
+            </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="h-40 md:h-56 rounded-xl bg-gradient-to-br from-indigo-50 via-white to-sky-50 border border-dashed border-indigo-100 flex items-center justify-center">
-              <div className="text-center px-4">
-                <BarChart3 className="h-8 w-8 md:h-10 md:w-10 text-indigo-300 mx-auto mb-2" />
-                <p className="text-xs md:text-sm text-gray-500">
-                  Chart placeholder &mdash; integrate real MAP analytics here for production.
-                </p>
+            {universitySummaryData?.summary ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-3 md:p-4 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <p className="text-xs text-blue-700 font-medium mb-1">Total Students</p>
+                  <p className="text-xl md:text-2xl font-bold text-blue-900">
+                    {universitySummaryData.summary.totalStudents}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gradient-to-br from-green-50 to-green-100 p-3 md:p-4 border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <GraduationCap className="h-5 w-5 text-green-600" />
+                  </div>
+                  <p className="text-xs text-green-700 font-medium mb-1">Alumni</p>
+                  <p className="text-xl md:text-2xl font-bold text-green-900">
+                    {universitySummaryData.summary.totalAlumni}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 p-3 md:p-4 border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Award className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <p className="text-xs text-purple-700 font-medium mb-1">Avg Points</p>
+                  <p className="text-xl md:text-2xl font-bold text-purple-900">
+                    {universitySummaryData.summary.avgPoints}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 p-3 md:p-4 border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <FileText className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <p className="text-xs text-amber-700 font-medium mb-1">Certificates</p>
+                  <p className="text-xl md:text-2xl font-bold text-amber-900">
+                    {universitySummaryData.summary.totalCertificates}
+                  </p>
+                </div>
+
+                <div className="col-span-2 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 md:p-4 border border-emerald-200">
+                  <p className="text-xs text-emerald-700 font-medium mb-2">Approved Certificates</p>
+                  <div className="flex items-end justify-between">
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-900">
+                      {universitySummaryData.summary.approvedCertificates}
+                    </p>
+                    <p className="text-xs text-emerald-600">
+                      {universitySummaryData.summary.totalCertificates > 0 
+                        ? Math.round((universitySummaryData.summary.approvedCertificates / universitySummaryData.summary.totalCertificates) * 100)
+                        : 0}% of total
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100 p-3 md:p-4 border border-yellow-200">
+                  <p className="text-xs text-yellow-700 font-medium mb-2">Pending</p>
+                  <p className="text-2xl md:text-3xl font-bold text-yellow-900">
+                    {universitySummaryData.summary.pendingCertificates}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gradient-to-br from-red-50 to-red-100 p-3 md:p-4 border border-red-200">
+                  <p className="text-xs text-red-700 font-medium mb-2">Rejected</p>
+                  <p className="text-2xl md:text-3xl font-bold text-red-900">
+                    {universitySummaryData.summary.rejectedCertificates}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-40 md:h-56 rounded-xl bg-gradient-to-br from-indigo-50 via-white to-sky-50 border border-dashed border-indigo-100 flex items-center justify-center">
+                <div className="text-center px-4">
+                  <BarChart3 className="h-8 w-8 md:h-10 md:w-10 text-indigo-300 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs md:text-sm text-gray-500">Loading MAP overview...</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -360,13 +466,19 @@ export default function SuperAdminDashboard() {
           <CardHeader className="pb-2 md:pb-3">
             <CardTitle className="flex items-center gap-2 text-sm md:text-base">
               <BarChart3 className="h-4 w-4 text-indigo-600" />
-              Top Department (Demo)
+              Top Department
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-xs md:text-sm">
-            <p className="font-semibold text-gray-900">Computer Science & Engineering</p>
-            <p className="text-gray-600">Overall MAP completion: 92%</p>
-            <p className="text-gray-500">Demo data – connect to real analytics later.</p>
+            {topDepartmentData?.performanceData?.[0] ? (
+              <>
+                <p className="font-semibold text-gray-900">{topDepartmentData.performanceData[0].department}</p>
+                <p className="text-gray-600">Avg Points: {topDepartmentData.performanceData[0].avgPoints}</p>
+                <p className="text-gray-500">Students: {topDepartmentData.performanceData[0].studentCount}</p>
+              </>
+            ) : (
+              <p className="text-gray-500">Loading...</p>
+            )}
           </CardContent>
         </Card>
 
@@ -374,13 +486,19 @@ export default function SuperAdminDashboard() {
           <CardHeader className="pb-2 md:pb-3">
             <CardTitle className="flex items-center gap-2 text-sm md:text-base">
               <Award className="h-4 w-4 text-amber-600" />
-              Top Student (Demo)
+              Top Student
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-xs md:text-sm">
-            <p className="font-semibold text-gray-900">Demo Student Name</p>
-            <p className="text-gray-600">Total MAP points: 145 / 150</p>
-            <p className="text-gray-500">B.Tech CSE · 4th Year</p>
+            {topStudentData?.students?.[0] ? (
+              <>
+                <p className="font-semibold text-gray-900">{topStudentData.students[0].name}</p>
+                <p className="text-gray-600">Total MAP points: {topStudentData.students[0].totalPoints}</p>
+                <p className="text-gray-500">{topStudentData.students[0].department} · {topStudentData.students[0].currentYear}</p>
+              </>
+            ) : (
+              <p className="text-gray-500">Loading...</p>
+            )}
           </CardContent>
         </Card>
 
@@ -388,13 +506,19 @@ export default function SuperAdminDashboard() {
           <CardHeader className="pb-2 md:pb-3">
             <CardTitle className="flex items-center gap-2 text-sm md:text-base">
               <Shield className="h-4 w-4 text-red-600" />
-              Pending Approvals (Demo)
+              Pending Approvals
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-xs md:text-sm">
-            <p className="font-semibold text-gray-900">Certificates awaiting clearance</p>
-            <p className="text-gray-600">University-wide pending: 37</p>
-            <p className="text-gray-500">Use audit or certificate APIs to drive this in future.</p>
+            {universitySummaryData?.summary ? (
+              <>
+                <p className="font-semibold text-gray-900">Certificates awaiting clearance</p>
+                <p className="text-gray-600">University-wide pending: {universitySummaryData.summary.pendingCertificates}</p>
+                <p className="text-gray-500">Pending Clearance Students: {universitySummaryData.summary.totalPendingClearance}</p>
+              </>
+            ) : (
+              <p className="text-gray-500">Loading...</p>
+            )}
           </CardContent>
         </Card>
       </div>

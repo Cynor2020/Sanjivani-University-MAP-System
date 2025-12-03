@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import LoadingSkeleton from "../../components/LoadingSkeleton.jsx";
+import AdPopup from "../../components/AdPopup.jsx";
 import toast from "react-hot-toast";
 import { 
   Upload, FileText, Download, ArrowRight, 
@@ -139,7 +140,11 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <>
+      {/* Ad Popup */}
+      <AdPopup />
+      
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -453,5 +458,6 @@ export default function StudentDashboard() {
         </Card>
       </div>
     </div>
+    </>
   );
 }

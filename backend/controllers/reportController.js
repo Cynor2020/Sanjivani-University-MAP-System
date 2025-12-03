@@ -578,6 +578,205 @@ export const detailedAnalytics = async (req, res) => {
   }
 };
 
+// Super Admin: University Summary
+export const universitySummary = async (req, res) => {
+  try {
+    // Total students
+    const totalStudents = await User.countDocuments({
+      role: "student",
+      status: { $ne: "deleted" }
+    });
+    
+    // Total alumni
+    const totalAlumni = await User.countDocuments({
+      role: "student",
+      status: "alumni"
+    });
+    
+    // Pending clearance
+    const totalPendingClearance = await User.countDocuments({
+      role: "student",
+      status: "pending_clearance"
+    });
+    
+    // Average points
+    const avgPointsResult = await User.aggregate([
+      {
+        $match: {
+          role: "student",
+          status: { $ne: "deleted" }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          avg: { $avg: "$totalPoints" }
+        }
+      }
+    ]);
+    
+    const avgPoints = avgPointsResult[0]?.avg ? Math.round(avgPointsResult[0].avg) : 0;
+    
+    // Certificate statistics
+    const totalCertificates = await Certificate.countDocuments();
+    const approvedCertificates = await Certificate.countDocuments({ status: "approved" });
+    const pendingCertificates = await Certificate.countDocuments({ status: "pending" });
+    const rejectedCertificates = await Certificate.countDocuments({ status: "rejected" });
+    
+    res.json({
+      summary: {
+        totalStudents,
+        totalAlumni,
+        totalPendingClearance,
+        avgPoints,
+        totalCertificates,
+        approvedCertificates,
+        pendingCertificates,
+        rejectedCertificates
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Super Admin: Performance vs Strength
+export const performanceVsStrength = async (req, res) => {
+  try {
+    const performanceData = await User.aggregate([
+      {
+        $match: {
+          role: "student",
+          status: { $ne: "deleted" }
+        }
+      },
+      {
+        $lookup: {
+          from: "departments",
+          localField: "department",
+          foreignField: "_id",
+          as: "departmentData"
+        }
+      },
+      { $unwind: "$departmentData" },
+      {
+        $group: {
+          _id: "$department",
+          department: { $first: "$departmentData.name" },
+          studentCount: { $sum: 1 },
+          totalPoints: { $sum: "$totalPoints" },
+          avgPoints: { $avg: "$totalPoints" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          department: 1,
+          studentCount: 1,
+          totalPoints: 1,
+          avgPoints: { $round: ["$avgPoints", 2] },
+          performanceIndex: {
+            $round: [
+              {
+                $multiply: [
+                  { $divide: ["$avgPoints", "$studentCount"] },
+                  100
+                ]
+              },
+              2
+            ]
+          }
+        }
+      },
+      { $sort: { avgPoints: -1 } }
+    ]);
+    
+    res.json({ performanceData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Super Admin: Top and Weak Branches
+export const topWeakBranches = async (req, res) => {
+  try {
+    const branchesData = await User.aggregate([
+      {
+        $match: {
+          role: "student",
+          status: { $ne: "deleted" }
+        }
+      },
+      {
+        $lookup: {
+          from: "departments",
+          localField: "department",
+          foreignField: "_id",
+          as: "departmentData"
+        }
+      },
+      { $unwind: "$departmentData" },
+      {
+        $group: {
+          _id: "$department",
+          department: { $first: "$departmentData.name" },
+          studentCount: { $sum: 1 },
+          avgPoints: { $avg: "$totalPoints" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          department: 1,
+          studentCount: 1,
+          avgPoints: { $round: ["$avgPoints", 2] }
+        }
+      },
+      { $sort: { avgPoints: -1 } }
+    ]);
+    
+    // Top 5 branches
+    const topBranches = branchesData.slice(0, 5);
+    
+    // Bottom 5 branches (weak)
+    const weakBranches = branchesData.slice(-5).reverse();
+    
+    res.json({ topBranches, weakBranches });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Super Admin: Student Leaderboard
+export const studentLeaderboard = async (req, res) => {
+  try {
+    const students = await User.find({
+      role: "student",
+      status: { $ne: "deleted" }
+    })
+      .populate('department', 'name')
+      .select('name email totalPoints currentYear program department')
+      .sort({ totalPoints: -1 })
+      .limit(50)
+      .lean();
+    
+    // Format the response
+    const formattedStudents = students.map(student => ({
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      department: student.department?.name || 'Unknown',
+      program: student.program || 'N/A',
+      currentYear: student.currentYear || 'N/A',
+      totalPoints: student.totalPoints || 0
+    }));
+    
+    res.json({ students: formattedStudents });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Super Admin: Export Detailed Analytics to CSV
 export const exportDetailedAnalytics = async (req, res) => {
   try {

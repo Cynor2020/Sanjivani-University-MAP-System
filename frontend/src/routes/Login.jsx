@@ -1,16 +1,20 @@
+// src/pages/Login.jsx
 import { useState } from "react";
 import { useAuth } from "./ProtectedRoute.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { z } from "zod";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(6) });
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setUser } = useAuth();
   const nav = useNavigate();
@@ -19,22 +23,21 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
     const parse = schema.safeParse({ email, password });
-    if (!parse.success) return toast.error("Invalid input");
-    
+    if (!parse.success) return toast.error("Invalid email or password");
+
     setIsLoading(true);
-    
+
     try {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
-        // Handle specific error for users without passwords
         if (data.error && data.error.includes("Account not activated")) {
           toast.error(data.error, { duration: 8000 });
         } else {
@@ -42,19 +45,19 @@ export default function Login() {
         }
         return;
       }
-      
+
       setUser(data.user);
-      
-      // Map role to correct route
+
       const roleRouteMap = {
         super_admin: "/superadmin",
         director: "/director",
         hod: "/hod",
-        student: "/student"
+        student: "/student",
       };
-      
+
       const to = loc.state?.from?.pathname || roleRouteMap[data.user.role] || "/";
       nav(to, { replace: true });
+      toast.success("Login Successful!");
     } catch (error) {
       toast.error("Login failed. Please try again.");
     } finally {
@@ -63,69 +66,96 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Card className="shadow-xl border-0 rounded-3xl overflow-hidden">
-          <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8">
-            <div className="flex justify-center mb-4">
-              <div className="bg-white p-3 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+        {/* Pure White Card */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+
+          {/* Header – Only Logo + Text (no blue background) */}
+          <div className="p-10 text-center">
+            <img
+              src="https://sanjivani.edu.in/images/SU%20LOGO.png"
+              alt="Sanjivani University"
+              className="w-24 h-24 mx-auto rounded-full shadow-lg border-4 border-white"
+            />
+            <h1 className="text-3xl font-bold text-gray-900 mt-5">Sanjivani University</h1>
+            <p className="text-gray-600 text-lg">Multi-Activity Points System</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={submit} className="px-10 pb-8 space-y-6">
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-600" />
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600" />
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition pr-12"
+                  disabled={isLoading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
-            <CardTitle className="text-3xl font-bold">Sanjivani University</CardTitle>
-            <p className="text-blue-100 mt-2">Multi-Activity Points Management</p>
-          </CardHeader>
-          
-          <form onSubmit={submit}>
-            <CardContent className="p-8 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="form-label">Email Address</label>
-                  <input 
-                    className="form-input"
-                    placeholder="Enter your email"
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    disabled={isLoading}
-                    type="email"
-                  />
-                </div>
-                
-                <div>
-                  <label className="form-label">Password</label>
-                  <input 
-                    className="form-input"
-                    type="password" 
-                    placeholder="Enter your password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-            </CardContent>
-            
-            <CardFooter className="flex flex-col p-8 pt-0 space-y-4">
-              <Button 
-                className="w-full py-3 text-base font-medium"
-                isLoading={isLoading}
-                type="submit"
-              >
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-              
-              <div className="text-center text-sm text-gray-500 pt-4 border-t border-gray-100">
-                <p>Developed by CYNOR SET Team</p>
-                <p className="mt-1">© {new Date().getFullYear()} Sanjivani University</p>
-              </div>
-            </CardFooter>
+
+            {/* Blue Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg transition disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
           </form>
-        </Card>
-        
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Having trouble signing in? Contact your system administrator</p>
+
+          {/* Footer – CYNORTECH */}
+          <div className="px-10 pb-10 text-center border-t pt-6">
+            <p className="text-sm text-gray-600">
+              Developed by <span className="font-bold text-blue-600">CYNORTECH</span>
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              © {new Date().getFullYear()} Sanjivani University. All rights reserved.
+            </p>
+          </div>
         </div>
       </div>
     </div>

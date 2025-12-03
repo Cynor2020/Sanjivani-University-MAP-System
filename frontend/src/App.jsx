@@ -22,6 +22,7 @@ import AnalyticsDepartment from "./routes/hod/AnalyticsDepartment.jsx";
 
 // Director Routes
 import DirectorDashboard from "./routes/director/DirectorDashboard.jsx";
+import ManageAds from "./routes/director/ManageAds.jsx";
 
 // Super Admin Routes
 import SuperAdminDashboard from "./routes/superadmin/SuperAdminDashboard.jsx";
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/director" element={<DirectorDashboard />} />
           <Route path="/director/analytics" element={<UniversityWideReports />} />
           <Route path="/director/manage-students" element={<DirectorManageStudents />} />
+          <Route path="/director/manage-ads" element={<ManageAds />} />
           <Route path="/director/audit-logs" element={<DirectorAuditLogs />} />
           <Route path="/director/pending-certificates" element={<DirectorPendingCertificates />} />
           <Route path="/director/approved-certificates" element={<DirectorApprovedCertificates />} />

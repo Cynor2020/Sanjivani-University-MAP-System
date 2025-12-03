@@ -8,7 +8,11 @@ import {
   exportDepartmentReport,
   detailedAnalytics,
   exportDetailedAnalytics,
-  getLatestApprovedCertificates
+  getLatestApprovedCertificates,
+  universitySummary,
+  performanceVsStrength,
+  topWeakBranches,
+  studentLeaderboard
 } from "../controllers/reportController.js";
 
 const router = Router();
@@ -35,5 +39,17 @@ router.get("/latest-approved", requireAuth, allowRoles("super_admin", "director"
 
 // Super Admin: Export Detailed Analytics to CSV
 router.get("/detailed-analytics/export", requireAuth, allowRoles("super_admin", "director"), exportDetailedAnalytics);
+
+// Super Admin/Director: University Summary
+router.get("/university", requireAuth, allowRoles("super_admin", "director"), universitySummary);
+
+// Super Admin/Director: Performance vs Strength
+router.get("/performance-vs-strength", requireAuth, allowRoles("super_admin", "director"), performanceVsStrength);
+
+// Super Admin/Director: Top and Weak Branches
+router.get("/top-weak-branches", requireAuth, allowRoles("super_admin", "director"), topWeakBranches);
+
+// Super Admin/Director: Student Leaderboard
+router.get("/leaderboard", requireAuth, allowRoles("super_admin", "director"), studentLeaderboard);
 
 export default router;
