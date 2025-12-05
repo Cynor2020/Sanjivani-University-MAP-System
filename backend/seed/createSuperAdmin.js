@@ -9,7 +9,7 @@ const createSuperAdmin = async () => {
   await connectDB();
   
   try {
-    const email = "superadmin@sanjivani.edu.in";
+    const email = "admin@gmail.com";
     const existing = await User.findOne({ email });
     
     if (existing) {
@@ -30,7 +30,7 @@ const createSuperAdmin = async () => {
         console.log("✅ Department reference fixed");
       }
     } else {
-      const hash = await bcrypt.hash("SuperAdmin@123", 10);
+      const hash = await bcrypt.hash("admin@gmail.com", 10);
       const superAdmin = await User.create({
         email,
         name: "Super Admin",

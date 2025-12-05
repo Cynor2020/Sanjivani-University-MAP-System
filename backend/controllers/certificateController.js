@@ -6,6 +6,7 @@ import AuditLog from "../models/AuditLog.js";
 import AcademicYear from "../models/AcademicYear.js";
 import UploadLock from "../models/UploadLock.js";
 import fs from "fs";
+import PDFDocument from 'pdfkit';
 import { getYearFieldName, getRelevantYearFields } from "../utils/academicYearHelper.js";
 
 const getClientIP = (req) => {
@@ -728,6 +729,206 @@ export const getUserProgress = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user progress:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+export const generateSkillCardPDF = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get user data
+    const user = await User.findById(userId)
+      .populate('department', 'name years yearRequirements');
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Get all approved certificates for this user
+    const certificates = await Certificate.find({
+      userId: userId,
+      status: "approved"
+    }).sort({ academicYear: 1, createdAt: 1 });
+    
+    // Group certificates by department year based on academic year progression
+    // We'll map academic years to department years based on when the student joined
+    const certificatesByYear = {};
+    
+    // Create a mapping from academic year to department year
+    // This is a simplified approach - in reality, this would depend on when the student joined
+    const academicToDeptYearMap = {};
+    const baseYears = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"];
+    
+    // For simplicity, we'll assume certificates are grouped by their academicYear field
+    // and map them to department years sequentially
+    const uniqueAcademicYears = [...new Set(certificates.map(cert => cert.academicYear).filter(Boolean))];
+    uniqueAcademicYears.sort();
+    
+    uniqueAcademicYears.forEach((academicYear, index) => {
+      const deptYear = baseYears[index] || `Year ${index + 1}`;
+      academicToDeptYearMap[academicYear] = `${deptYear} Year`;
+    });
+    
+    certificates.forEach(cert => {
+      // Use mapped department year or fallback to academic year
+      const academicYear = cert.academicYear || 'Unknown Academic Year';
+      const deptYear = academicToDeptYearMap[academicYear] || academicYear;
+      
+      if (!certificatesByYear[deptYear]) {
+        certificatesByYear[deptYear] = [];
+      }
+      certificatesByYear[deptYear].push(cert);
+    });
+    
+    // Create PDF document
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 50
+    });
+    
+    // Create a buffer to store PDF data
+    const chunks = [];
+    
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=skill-card-${user.prn || user.enrollmentNumber || 'transcript'}.pdf`);
+      res.send(pdfBuffer);
+    });
+    
+    // Add university header without logo to avoid file path issues
+    doc.fontSize(20)
+       .font('Helvetica-Bold')
+       .text('SANJIVANI UNIVERSITY', 50, 45, { align: 'center' })
+       .fontSize(16)
+       .text('Kopargaon, Dist: Ahilyanagar, Maharashtra-423601', 50, 75, { align: 'center' })
+       .moveDown();
+    
+    // Draw a line separator
+    doc.moveTo(50, 100)
+       .lineTo(550, 100)
+       .stroke();
+    
+    // Title
+    doc.fontSize(18)
+       .font('Helvetica-Bold')
+       .text('STUDENT SKILL CARD', { align: 'center' })
+       .moveDown();
+    
+    // Student information (only name and PRN)
+    doc.fontSize(12)
+       .font('Helvetica')
+       .text(`Name: ${user.name}`)
+       .text(`PRN: ${user.prn || user.enrollmentNumber || 'N/A'}`)
+       .text(`Department: ${user.department?.name || 'N/A'}`)
+       .moveDown();
+    
+    // Overall statistics
+    const totalPoints = user.totalPoints || 0;
+    const requiredPoints = user.department?.yearRequirements ? 
+      Array.from(user.department.yearRequirements.values()).reduce((sum, req) => sum + (req.points || 0), 0) : 200;
+    const percentage = requiredPoints > 0 ? Math.round((totalPoints / requiredPoints) * 100) : 0;
+    
+    doc.font('Helvetica-Bold')
+       .text('OVERALL SUMMARY', { underline: true })
+       .font('Helvetica')
+       .text(`Total Points Earned: ${totalPoints}`)
+       .text(`Total Points Required: ${requiredPoints}`)
+       .text(`Completion Percentage: ${percentage}%`)
+       .moveDown();
+    
+    // Department year breakdown
+    doc.font('Helvetica-Bold')
+       .text('DEPARTMENT YEAR BREAKDOWN', { underline: true })
+       .moveDown();
+    
+    // Get all department years
+    const deptYears = Object.keys(certificatesByYear);
+    
+    if (deptYears.length === 0) {
+      doc.font('Helvetica')
+         .text('No approved certificates found.')
+         .moveDown();
+    } else {
+      deptYears.forEach(deptYear => {
+        const yearCertificates = certificatesByYear[deptYear];
+        const yearPoints = yearCertificates.reduce((sum, cert) => sum + (cert.pointsAllocated || 0), 0);
+        
+        // Consistent left alignment for department year headings
+        doc.font('Helvetica-Bold')
+           .fontSize(14)
+           .text(`${deptYear}`, 50, doc.y)
+           .moveDown();
+        
+        // Table headers (without date column)
+        const tableTop = doc.y;
+        const rowHeight = 20;
+        const col1Width = 200;
+        const col2Width = 120;
+        const col3Width = 130;
+        
+        // Draw table headers
+        doc.font('Helvetica-Bold')
+           .fontSize(12)
+           .text('Activity', 50, tableTop)
+           .text('Level', 50 + col1Width, tableTop)
+           .text('Points', 50 + col1Width + col2Width, tableTop);
+        
+        // Draw header line
+        doc.moveTo(50, tableTop + 15)
+           .lineTo(550, tableTop + 15)
+           .stroke();
+        
+        // Draw certificates for this department year
+        let yPos = tableTop + 20;
+        yearCertificates.forEach(cert => {
+          doc.font('Helvetica')
+             .fontSize(10)
+             .text(cert.title, 50, yPos, { width: col1Width, ellipsis: true })
+             .text(cert.level, 50 + col1Width, yPos, { width: col2Width })
+             .text(cert.pointsAllocated.toString(), 50 + col1Width + col2Width, yPos, { width: col3Width });
+          
+          yPos += rowHeight;
+          
+          // Add a new page if needed
+          if (yPos > 750) {
+            doc.addPage();
+            yPos = 50;
+          }
+        });
+        
+        // Add spacing after each year section
+        doc.moveDown();
+      });
+    }
+    
+    // Final summary
+    doc.addPage()
+       .fontSize(16)
+       .font('Helvetica-Bold')
+       .text('FINAL SUMMARY', { align: 'center', underline: true })
+       .moveDown(2)
+       .fontSize(12)
+       .font('Helvetica')
+       .text(`Total Points Earned: ${totalPoints}`)
+       .text(`Total Points Required: ${requiredPoints}`)
+       .text(`Overall Completion: ${percentage}%`)
+       .moveDown(2)
+       .text('This Skill Card is officially certified by Sanjivani University.', { align: 'center' })
+       .text('It represents the verified activities and achievements of the student.', { align: 'center' });
+    
+    // Footer
+    doc.fontSize(10)
+       .text(`Generated on: ${new Date().toLocaleDateString()}`, 50, 800)
+       .text('Sanjivani University - Official Document', 400, 800);
+    
+    doc.end();
+  } catch (error) {
+    console.error("Error generating skill card PDF:", error);
     res.status(500).json({ error: error.message });
   }
 };

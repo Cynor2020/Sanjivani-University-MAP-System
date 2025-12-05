@@ -376,7 +376,7 @@ export default function StudentDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {progressData.yearWise.map((yearData, index) => (
                 <div key={index} className="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-lg transition-shadow">
-                  <h3 className="font-bold text-center mb-3 text-gray-900 text-lg">Year {yearData.year}</h3>
+                  <h3 className="font-bold text-center mb-3 text-gray-900 text-lg">{yearData.year} Year</h3>
                   <div className="text-center text-3xl font-bold mb-3 text-gray-900">
                     {yearData.points || 0} / {yearData.requiredPoints || 100}
                   </div>
@@ -437,8 +437,8 @@ export default function StudentDashboard() {
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
               <Download className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Download Transcript</h3>
-            <p className="text-sm text-gray-600">Get your official MAP transcript</p>
+            <h3 className="font-bold text-lg text-gray-900 mb-2">My Skill Card</h3>
+            <p className="text-sm text-gray-600">Get your official MAP skill card</p>
             <ArrowRight className="h-5 w-5 text-purple-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
           </CardContent>
         </Card>
@@ -447,14 +447,7 @@ export default function StudentDashboard() {
           className="group cursor-pointer border-2 border-transparent hover:border-amber-500 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-amber-50"
           onClick={() => navigate("/student/carry-forward")}
         >
-          <CardContent className="p-6 text-center">
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-              <ArrowRight className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Carry Forward</h3>
-            <p className="text-sm text-gray-600">Request to carry forward points</p>
-            <ArrowRight className="h-5 w-5 text-amber-600 mx-auto mt-4 group-hover:translate-x-1 transition-transform" />
-          </CardContent>
+          
         </Card>
       </div>
     </div>

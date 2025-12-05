@@ -12,7 +12,8 @@ import {
   getCertificateStats,
   approvedCertificates,
   deleteApprovedCertificate,
-  getUserProgress
+  getUserProgress,
+  generateSkillCardPDF
 } from "../controllers/certificateController.js";
 
 const router = Router();
@@ -21,6 +22,7 @@ const router = Router();
 router.get("/upload-status", requireAuth, allowRoles("student"), checkUploadStatus);
 router.post("/upload", requireAuth, allowRoles("student"), upload.single('file'), uploadCertificate);
 router.get("/mine", requireAuth, allowRoles("student"), myCertificates);
+router.get("/skill-card", requireAuth, allowRoles("student"), generateSkillCardPDF);
 
 // Progress route - accessible to students and higher roles
 router.get("/progress/:userId", requireAuth, getUserProgress);

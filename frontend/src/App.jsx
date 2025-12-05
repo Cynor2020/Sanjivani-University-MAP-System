@@ -12,6 +12,7 @@ import StudentDashboard from "./routes/student/StudentDashboard.jsx";
 import UploadCertificate from "./routes/student/UploadCertificate.jsx";
 import MyCertificates from "./routes/student/MyCertificates.jsx";
 import MyPoints from "./routes/student/MyPoints.jsx";
+import TranscriptDownload from "./routes/student/TranscriptDownload.jsx";
 
 // HOD Routes
 import HODDashboard from "./routes/hod/HODDashboard.jsx";
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/student/upload" element={<UploadCertificate />} />
           <Route path="/student/certificates" element={<MyCertificates />} />
           <Route path="/student/points" element={<MyPoints />} />
+          <Route path="/student/transcript" element={<TranscriptDownload />} />
 
           {/* HOD Routes */}
           <Route path="/hod" element={<HODDashboard />} />

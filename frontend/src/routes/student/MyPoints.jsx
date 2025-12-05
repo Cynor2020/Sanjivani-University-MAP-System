@@ -190,7 +190,7 @@ export default function MyPoints() {
                 <tbody>
                   {progressData.yearWise.map((yearData, index) => (
                     <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-4 font-semibold">Year {yearData.year}</td>
+                      <td className="p-4 font-semibold">{yearData.year} Year </td>
                       <td className="p-4">
                         <span className="font-bold text-gray-900">{yearData.points || 0}</span>
                       </td>
@@ -228,7 +228,7 @@ export default function MyPoints() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Award className="h-6 w-6 text-blue-600" />
-              <span>Current Year Progress (Year {user?.currentYear})</span>
+              <span>Current Year Progress ({user?.currentYear} Year)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
